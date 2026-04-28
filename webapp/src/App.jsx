@@ -35,6 +35,23 @@ export default function App() {
     return {};
   });
   const [user, setUser] = useState(null);
+  const [introError, setIntroError] = useState(false);
+  const [timeLeft, setTimeLeft] = useState('');
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = new Date();
+      const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+      const diff = tomorrow - now;
+      
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      
+      setTimeLeft(`${h}h ${m}m ${s}s`);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -48,7 +65,38 @@ export default function App() {
   }, [data]);
 
   const updateData = (key, value) => {
-    setData(prev => ({ ...prev, [key]: value }));
+    setData(prev => {
+      const newData = { ...prev, [key]: value };
+      // If a day is being marked as finished, record the timestamp
+      if (key.endsWith('_finished') && value === true) {
+        const dayKey = key.split('_')[0]; // e.g., 'day1'
+        newData[`${dayKey}_completedAt`] = Date.now();
+      }
+      return newData;
+    });
+    if ((key === 'intro_commitment' || key === 'user_name') && value) setIntroError(false);
+  };
+
+  const isSameDay = (d1, d2) => {
+    if (!d1 || !d2) return false;
+    const date1 = new Date(d1);
+    const date2 = new Date(d2);
+    return date1.getFullYear() === date2.getFullYear() &&
+           date1.getMonth() === date2.getMonth() &&
+           date1.getDate() === date2.getDate();
+  };
+
+  const getCalendarLink = (dayNum) => {
+    const nextDay = new Date();
+    nextDay.setDate(nextDay.getDate() + 1);
+    nextDay.setHours(9, 0, 0, 0); // Default to 9 AM
+    
+    const start = nextDay.toISOString().replace(/-|:|\.\d\d\d/g, "");
+    const end = new Date(nextDay.getTime() + 30 * 60000).toISOString().replace(/-|:|\.\d\d\d/g, "");
+    
+    const title = encodeURIComponent(`Day ${dayNum}: Attention Reset`);
+    const details = encodeURIComponent(`Time for your next step in the Attention Reset. Open the app to continue!`);
+    return `https://www.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${start}/${end}&details=${details}`;
   };
 
   const resetData = () => {
@@ -62,6 +110,12 @@ export default function App() {
   };
 
   const handleNext = () => {
+    if (currentPageIndex === 0 && (!data.intro_commitment || !data.user_name?.trim())) {
+      setIntroError(true);
+      setTimeout(() => setIntroError(false), 3000);
+      return;
+    }
+
     if (currentPageIndex < PAGES.length - 1) {
       setCurrentPageIndex(prev => prev + 1);
       window.scrollTo(0, 0);
@@ -77,10 +131,10 @@ export default function App() {
 
   const renderPage = () => {
     const pageId = PAGES[currentPageIndex];
-    const props = { data, updateData };
+    const props = { data, updateData, user };
     
     switch (pageId) {
-      case 'intro': return <Intro {...props} />;
+      case 'intro': return <Intro {...props} introError={introError} />;
       case 'day1': return <Day1 {...props} />;
       case 'day2': return <Day2 {...props} />;
       case 'day3': return <Day3 {...props} />;
@@ -159,12 +213,20 @@ export default function App() {
           <button
             onClick={() => setShowLanding(true)}
             style={{
-              display: 'flex', alignItems: 'center', gap: '5px',
+              display: 'flex', alignItems: 'center', gap: '8px',
               fontSize: '0.68rem', letterSpacing: '1.5px', textTransform: 'uppercase',
-              color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer'
+              color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer',
+              padding: 0
             }}
           >
-            ← Overview
+            <svg 
+              width="12" height="12" viewBox="0 0 24 24" 
+              fill="none" stroke="currentColor" strokeWidth="2.5" 
+              strokeLinecap="round" strokeLinejoin="round"
+            >
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            <span style={{ marginTop: '1px' }}>Overview</span>
           </button>
           <h1 style={{ fontSize: '0.85rem', fontFamily: 'var(--font-body)', fontWeight: 600, textTransform: 'uppercase', color: 'var(--muted)', margin: 0 }}>
             7-Day Attention Reset
@@ -174,8 +236,8 @@ export default function App() {
 
         {/* Progress Track */}
         {(() => {
-          const DAY_COLORS = ['var(--day0)','var(--day1)','var(--day2)','var(--day3)','var(--day4)','var(--day5)','var(--day6)','var(--day7)'];
-          const nodes = 8; // intro + 7 days
+          const DAY_COLORS = ['var(--day0)','var(--day1)','var(--day2)','var(--day3)','var(--day4)','var(--day5)','var(--day6)','var(--day7)', 'var(--day-gen)'];
+          const nodes = currentPageIndex === 8 ? 9 : 8; // Show 9 nodes only on completion
           return (
             <div>
               <div style={{ position: 'relative', height: '32px', display: 'flex', alignItems: 'center', marginBottom: '6px' }}>
@@ -192,25 +254,54 @@ export default function App() {
                     const done = i <= currentPageIndex;
                     const active = i === currentPageIndex;
                     const color = DAY_COLORS[i] || 'var(--day7)';
+                    const prevDayFinished = i === 1 ? data.intro_commitment : (i > 1 && data[`day${i-1}_finished`]);
+                    const isAdmin = user?.email === 'favazmk12@gmail.com';
+                    const timeLocked = !isAdmin && i > 1 && prevDayFinished && isSameDay(data[`day${i-1}_completedAt`], Date.now());
+                    
+                    const isUnlocked = i === 0 || (prevDayFinished && !timeLocked) || (i === 8 && data.day7_finished && (isAdmin || !isSameDay(data.day7_completedAt, Date.now())));
+                    
                     return (
-                      <div key={i} style={{
-                        width: active ? '14px' : '8px',
-                        height: active ? '14px' : '8px',
-                        borderRadius: '50%',
-                        backgroundColor: done ? color : 'var(--border)',
-                        border: active ? `2px solid ${color}` : 'none',
-                        boxShadow: done ? `0 0 6px ${color}` : 'none',
-                        transition: 'all 0.4s cubic-bezier(0.22, 1, 0.36, 1)',
-                      }} />
+                      <div 
+                        key={i} 
+                        onClick={() => { if (isUnlocked) setCurrentPageIndex(i); }}
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          position: 'relative',
+                          cursor: isUnlocked ? 'pointer' : 'default',
+                          zIndex: 10
+                        }}
+                      >
+                        <div 
+                          style={{
+                            width: active ? '14px' : '8px',
+                            height: active ? '14px' : '8px',
+                            borderRadius: '50%',
+                            backgroundColor: done ? color : 'var(--border)',
+                            border: active ? `2px solid ${color}` : 'none',
+                            boxShadow: done ? (i === 8 ? `0 0 12px ${color}, 0 0 20px rgba(255,255,255,0.4)` : `0 0 6px ${color}`) : 'none',
+                            transition: 'all 0.4s cubic-bezier(0.22, 1, 0.36, 1)',
+                            marginBottom: '4px'
+                          }} 
+                        />
+                        <span style={{
+                          fontSize: '0.5rem',
+                          fontWeight: active ? 700 : 400,
+                          color: done ? color : 'var(--muted)',
+                          position: 'absolute',
+                          top: '18px',
+                          whiteSpace: 'nowrap',
+                          letterSpacing: '0.5px',
+                          textTransform: 'uppercase',
+                          transition: 'color 0.4s'
+                        }}>
+                          {i === 0 ? 'Intro' : i < 8 ? `D${i}` : 'Beyond'}
+                        </span>
+                      </div>
                     );
                   })}
                 </div>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.6rem', color: 'var(--muted)' }}>Scattered</span>
-                <span style={{ fontSize: '0.6rem', color: currentPageIndex === 8 ? 'var(--day7)' : 'var(--muted)', transition: 'color 0.4s' }}>
-                  Locked In
-                </span>
               </div>
             </div>
           );
@@ -222,13 +313,27 @@ export default function App() {
       </main>
 
       <footer style={{ marginTop: '4rem', paddingTop: '2rem', borderTop: '1px solid var(--border)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
+        <div className="footer-btn-container">
           <button
             className="outline-btn"
             onClick={handlePrev}
-            style={{ opacity: currentPageIndex === 0 ? 0 : 1, pointerEvents: currentPageIndex === 0 ? 'none' : 'auto' }}
+            style={{ 
+              opacity: currentPageIndex === 0 ? 0 : 1, 
+              pointerEvents: currentPageIndex === 0 ? 'none' : 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
           >
-            ← Back
+            <svg 
+              width="14" height="14" viewBox="0 0 24 24" 
+              fill="none" stroke="currentColor" strokeWidth="2.5" 
+              strokeLinecap="round" strokeLinejoin="round"
+              style={{ flexShrink: 0 }}
+            >
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            <span style={{ marginTop: '1px' }}>Back</span>
           </button>
 
           {(() => {
@@ -247,19 +352,102 @@ export default function App() {
             const isLast = currentPageIndex === PAGES.length - 1;
             const label = currentPageIndex < 7 ? `Start Day ${currentPageIndex + 1}` : 'Finish Reset';
 
+            const isDayCompleted = currentPageIndex === 0 ? true : data[`day${currentPageIndex}_finished`];
+            const isAdmin = user?.email === 'favazmk12@gmail.com';
+            const nextDayTimeLocked = !isAdmin && !isLast && isDayCompleted && isSameDay(data[`day${currentPageIndex}_completedAt`], Date.now());
+
             return (
-              <button
-                className="primary-btn"
-                onClick={handleNext}
-                style={{
-                  opacity: isLast ? 0 : 1,
-                  pointerEvents: isLast ? 'none' : 'auto',
-                  backgroundColor: DAY_COLORS[currentPage],
-                  transition: 'background-color 0.4s ease, transform 0.2s, box-shadow 0.2s',
-                }}
-              >
-                {label} →
-              </button>
+              <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+                {nextDayTimeLocked ? (
+                  <div style={{ width: '100%', textAlign: 'center' }}>
+                    <div style={{ 
+                      padding: '16px 24px', 
+                      borderRadius: '12px', 
+                      backgroundColor: 'rgba(255,255,255,0.05)', 
+                      border: '1px solid var(--border)',
+                      color: 'var(--muted)',
+                      fontSize: '0.85rem',
+                      fontWeight: 500,
+                      marginBottom: '12px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                          <line x1="16" y1="2" x2="16" y2="6"></line>
+                          <line x1="8" y1="2" x2="8" y2="6"></line>
+                          <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
+                        <span>Next Day Unlocks Tomorrow</span>
+                      </div>
+                      <div style={{ 
+                        fontSize: '0.7rem', 
+                        opacity: 0.6, 
+                        letterSpacing: '1px', 
+                        textTransform: 'uppercase',
+                        fontWeight: 600
+                      }}>
+                        {timeLeft} remaining
+                      </div>
+                    </div>
+                    <a 
+                      href={getCalendarLink(currentPageIndex + 1)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ 
+                        fontSize: '0.75rem', 
+                        color: DAY_COLORS[currentPage], 
+                        textDecoration: 'none',
+                        fontWeight: 600,
+                        letterSpacing: '0.5px',
+                        textTransform: 'uppercase',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      <span>Add Reminder to Calendar</span>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                        <polyline points="15 3 21 3 21 9"></polyline>
+                        <line x1="10" y1="14" x2="21" y2="3"></line>
+                      </svg>
+                    </a>
+                  </div>
+                ) : (
+                  <button
+                    className="primary-btn"
+                    onClick={handleNext}
+                    style={{
+                      width: '100%',
+                      opacity: (isLast || !isDayCompleted) ? 0 : 1,
+                      pointerEvents: (isLast || !isDayCompleted) ? 'none' : 'auto',
+                      backgroundColor: DAY_COLORS[currentPage],
+                      transition: 'background-color 0.4s ease, transform 0.2s, box-shadow 0.2s',
+                    }}
+                  >
+                    <span style={{ marginTop: '1px' }}>{label}</span>
+                    <svg 
+                      width="18" height="18" viewBox="0 0 24 24" 
+                      fill="none" stroke="currentColor" strokeWidth="2.2" 
+                      strokeLinecap="round" strokeLinejoin="round"
+                      style={{ flexShrink: 0 }}
+                    >
+                      <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
+                  </button>
+                )}
+                {currentPageIndex === 0 && introError && (!data.intro_commitment || !data.user_name?.trim()) && (
+                  <div style={{ position: 'absolute', top: '100%', marginTop: '12px', color: '#FF3B30', fontSize: '0.85rem', fontWeight: 600, whiteSpace: 'nowrap', animation: 'fadeIn 0.2s ease-in' }}>
+                    {!data.user_name?.trim() ? '* Please save your name above' : '* Please commit to start'}
+                  </div>
+                )}
+              </div>
             );
           })()}
         </div>

@@ -260,12 +260,12 @@ export const PAGE_PATTERNS = {
 
 /* ─── Mascot Data ─────────────────────────────────────────── */
 const MASCOTS = {
-  day1: { SVG: ScrollerSVG,   name: 'The Scroller',   vibe: 'Phone in hand. Soul in the cloud. Every ping a tiny hit of dopamine.', mood: 'SCATTERED',   moodColor: '#FF3B3B' },
-  day2: { SVG: DetectiveSVG,  name: 'The Detective',  vibe: 'I see my leaks now. Every distraction leaves a trail.',                  mood: 'AWARE',       moodColor: '#F5C842' },
+  day1: { SVG: ScrollerSVG,   name: 'The Scroller',   vibe: 'Phone in hand. Soul in the cloud. Every ping a tiny hit of dopamine.', mood: 'SCATTERED',   moodColor: '#00E87A' },
+  day2: { SVG: DetectiveSVG,  name: 'The Detective',  vibe: 'I see my leaks now. Every distraction leaves a trail.',                  mood: 'AWARE',       moodColor: '#B060FF' },
   day3: { SVG: MonkSVG,       name: 'The Monk',       vibe: 'One task. One hour. The noise is gone — I left it outside.',             mood: 'DISCIPLINED', moodColor: '#3BB8E8' },
-  day4: { SVG: SprinterSVG,   name: 'The Sprinter',   vibe: 'Focus is a muscle. Every rep makes me stronger.',                       mood: 'TRAINING',    moodColor: '#B060FF' },
+  day4: { SVG: SprinterSVG,   name: 'The Sprinter',   vibe: 'Focus is a muscle. Every rep makes me stronger.',                       mood: 'TRAINING',    moodColor: '#F5C842' },
   day5: { SVG: ArchitectSVG,  name: 'The Architect',  vibe: 'I don\'t fight distractions. I designed them out of existence.',         mood: 'STRATEGIC',   moodColor: '#00E5C0' },
-  day6: { SVG: DetoxerSVG,    name: 'The Detoxer',    vibe: 'Boredom is not the enemy. It\'s the signal that I\'m healing.',         mood: 'RESETTING',   moodColor: '#00E87A' },
+  day6: { SVG: DetoxerSVG,    name: 'The Detoxer',    vibe: 'Boredom is not the enemy. It\'s the signal that I\'m healing.',         mood: 'RESETTING',   moodColor: '#FF3B3B' },
   day7: { SVG: MasterSVG,     name: 'The Master',     vibe: 'I don\'t react. I respond. I don\'t scroll. I think. I don\'t resist. I don\'t need to.', mood: 'LOCKED IN', moodColor: '#FF8C00' },
 };
 

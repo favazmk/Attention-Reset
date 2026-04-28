@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: #0E0E0B;
+        color: #EDE8DC;
+        font-family: 'DM Sans', sans-serif;
+      }
+
+      .clip {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 80px;
+        /* Remove opacity: 0 as framework handles visibility via data-start/duration */
+      }
+
+      .headline {
+        font-family: 'DM Serif Display', serif;
+        font-size: 140px;
+        line-height: 1.1;
+        text-transform: uppercase;
+        margin-bottom: 40px;
+      }
+
+      .subtitle {
+        font-size: 48px;
+        font-weight: 300;
+        letter-spacing: 0.1em;
+        line-height: 1.6;
+        color: rgba(237, 232, 220, 0.7);
+      }
+
+      .highlight-red { color: #FF3B3B; }
+      .highlight-gold { color: #F5C842; text-shadow: 0 0 30px rgba(245, 200, 66, 0.4); }
+
+      .glitch-layer {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle, rgba(255, 59, 59, 0.15) 0%, transparent 70%);
+        opacity: 0;
+      }
+
+      .gold-sweep {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, transparent 40%, rgba(245, 200, 66, 0.1) 50%, transparent 60%);
+        transform: translateX(-100%);
+      }
+
+      .cta-btn {
+        background: #F5C842;
+        color: #0E0E0B;
+        padding: 30px 60px;
+        font-weight: 800;
+        font-size: 52px;
+        border-radius: 12px;
+        margin-top: 60px;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+      }
+
+      .price-tag {
+        font-family: 'DM Serif Display', serif;
+        font-size: 90px;
+        color: #F5C842;
+        margin-top: 40px;
+      }
+
+      .checklist {
+        list-style: none;
+        text-align: left;
+        width: 100%;
+        max-width: 800px;
+        margin-top: 40px;
+      }
+
+      .checklist li {
+        font-size: 42px;
+        margin-bottom: 25px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+      }
+
+      .checklist li::before {
+        content: "✓";
+        color: #F5C842;
+        font-weight: 900;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="15"
+      data-width="1080"
+      data-height="1920"
+    >
+      <audio id="bgm" src="music.mp3"></audio>
+
+      <!-- Scene 1: Hook -->
+      <div id="scene1" class="clip" data-start="0" data-duration="3">
+        <div class="scene-content" id="content1">
+          <div class="glitch-layer" id="glitch1"></div>
+          <h1 class="headline" id="hook1">YOUR ATTENTION<br />WAS <span class="highlight-red">STOLEN.</span></h1>
+        </div>
+      </div>
+
+      <!-- Scene 2: The Struggle -->
+      <div id="scene2" class="clip" data-start="3" data-duration="3">
+        <div class="scene-content" id="content2">
+          <h2 class="headline" style="font-size: 100px;">SCROLLING...<br />BUT FEELING<br /><span class="highlight-red">NOTHING?</span></h2>
+        </div>
+      </div>
+
+      <!-- Scene 3: The Truth -->
+      <div id="scene3" class="clip" data-start="6" data-duration="3">
+        <div class="scene-content" id="content3">
+          <h2 class="headline" style="font-size: 110px;">IT'S NOT<br />YOUR <span class="highlight-gold">FAULT.</span></h2>
+          <p class="subtitle">The system was designed<br />to hijack your brain.</p>
+        </div>
+      </div>
+
+      <!-- Scene 4: The Reset -->
+      <div id="scene4" class="clip" data-start="9" data-duration="3.5">
+        <div class="scene-content" id="content4">
+          <div class="gold-sweep" id="sweep"></div>
+          <h1 class="headline" style="font-size: 110px; color: #F5C842;">THE 7-DAY<br />ATTENTION RESET</h1>
+          <ul class="checklist">
+            <li>Interactive Protocols</li>
+            <li>10-20 Mins / Day</li>
+            <li>No Downloads</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Scene 5: CTA -->
+      <div id="scene5" class="clip" data-start="12.5" data-duration="2.5">
+        <div class="scene-content" id="content5">
+          <h1 class="headline">TAKE IT BACK.</h1>
+          <div class="cta-btn">START DAY 1</div>
+          <div class="price-tag">₹399</div>
+          <p class="subtitle" style="margin-top: 60px;">Link in Bio</p>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      // Scene 1: Hook (0-3s)
+      tl.from("#content1", { opacity: 0, duration: 0.3 }, 0);
+      tl.from("#hook1", { scale: 1.5, opacity: 0, duration: 0.8, ease: "power4.out" }, 0.1);
+      tl.to("#glitch1", { opacity: 1, duration: 0.1, repeat: 5, yoyo: true }, 0.5);
+      tl.to("#content1", { opacity: 0, duration: 0.3 }, 2.7);
+      tl.set("#content1", { opacity: 0 }, 3.0);
+
+      // Scene 2: Struggle (3-6s)
+      tl.from("#content2", { opacity: 0, duration: 0.3 }, 3);
+      tl.from("#content2 h2", { x: -50, opacity: 0, duration: 0.5, ease: "back.out" }, 3.1);
+      tl.to("#content2", { opacity: 0, duration: 0.3 }, 5.7);
+      tl.set("#content2", { opacity: 0 }, 6.0);
+
+      // Scene 3: Truth (6-9s)
+      tl.from("#content3", { opacity: 0, duration: 0.5 }, 6);
+      tl.from("#content3 .headline", { y: 30, opacity: 0, duration: 1, ease: "power2.out" }, 6.2);
+      tl.from("#content3 .subtitle", { y: 20, opacity: 0, duration: 1, ease: "power2.out" }, 6.8);
+      tl.to("#content3", { opacity: 0, duration: 0.5 }, 8.5);
+      tl.set("#content3", { opacity: 0 }, 9.0);
+
+      // Scene 4: Reset (9-12.5s)
+      tl.from("#content4", { opacity: 0, duration: 0.5 }, 9);
+      tl.to("#sweep", { x: "100%", duration: 2, ease: "power2.inOut" }, 9);
+      tl.from("#content4 .headline", { scale: 0.9, opacity: 0, duration: 1, ease: "power3.out" }, 9.2);
+      tl.from("#content4 .checklist li", { 
+        x: -40, 
+        opacity: 0, 
+        duration: 0.6, 
+        stagger: 0.2, 
+        ease: "power2.out" 
+      }, 9.8);
+      tl.to("#content4", { opacity: 0, duration: 0.4 }, 12.1);
+      tl.set("#content4", { opacity: 0 }, 12.5);
+
+      // Scene 5: CTA (12.5-15s)
+      tl.from("#content5", { opacity: 0, duration: 0.5 }, 12.5);
+      tl.from("#content5 .headline", { y: -50, opacity: 0, duration: 0.8, ease: "power4.out" }, 12.7);
+      tl.from(".cta-btn", { scale: 0.5, opacity: 0, duration: 0.8, ease: "back.out(1.7)" }, 13.2);
+      tl.from(".price-tag", { y: 20, opacity: 0, duration: 0.6 }, 13.7);
+      
+      // Heartbeat pulse for CTA
+      tl.to(".cta-btn", { scale: 1.05, duration: 0.4, repeat: 5, yoyo: true, ease: "sine.inOut" }, 14);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>
