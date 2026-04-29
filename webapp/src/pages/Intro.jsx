@@ -218,7 +218,7 @@ export default function Intro({ data, updateData, introError }) {
           You already know your attention is slipping.
         </p>
         <p style={{ fontSize: '1.5rem', color: 'var(--accent)', fontWeight: 700, letterSpacing: '-0.02em', textTransform: 'uppercase' }}>
-          THIS IS WHERE YOU FIX IT.
+          ITS TIME TO FIX IT.
         </p>
       </div>
 
