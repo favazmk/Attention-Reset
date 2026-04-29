@@ -26,18 +26,9 @@ const PAGES = [
 ];
 
 export default function App() {
-  const [showLanding, setShowLanding] = useState(
-    () => !localStorage.getItem('ar_enrolled')
-  );
-  const [currentPageIndex, setCurrentPageIndex] = useState(() => {
-    const saved = localStorage.getItem('ar_current_page');
-    return saved ? parseInt(saved, 10) : 0;
-  });
-  const [data, setData] = useState(() => {
-    const saved = localStorage.getItem('attention_workbook_data');
-    if (saved) return JSON.parse(saved);
-    return {};
-  });
+  const [showLanding, setShowLanding] = useState(true);
+  const [currentPageIndex, setCurrentPageIndex] = useState(0);
+  const [data, setData] = useState({});
   const [user, setUser] = useState(null);
   const [introError, setIntroError] = useState(false);
   const [timeLeft, setTimeLeft] = useState('');
@@ -58,37 +49,71 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    const unsubscribe = onAuthStateChanged(auth, (authUser) => {
+      setUser(authUser);
+      if (authUser) {
+        // Load user-specific data
+        let savedData = localStorage.getItem(`ar_data_${authUser.uid}`);
+        if (!savedData) {
+          // Fallback to legacy global data if migrating
+          savedData = localStorage.getItem('attention_workbook_data');
+          if (savedData) localStorage.setItem(`ar_data_${authUser.uid}`, savedData);
+        }
+        setData(savedData ? JSON.parse(savedData) : {});
+
+        let savedPage = localStorage.getItem(`ar_page_${authUser.uid}`);
+        if (!savedPage) {
+          savedPage = localStorage.getItem('ar_current_page');
+        }
+        setCurrentPageIndex(savedPage ? parseInt(savedPage, 10) : 0);
+
+        let savedEnrolled = localStorage.getItem(`ar_enrolled_${authUser.uid}`);
+        if (!savedEnrolled) {
+          savedEnrolled = localStorage.getItem('ar_enrolled');
+        }
+        setShowLanding(!savedEnrolled);
+      } else {
+        // Reset state on sign out
+        setData({});
+        setCurrentPageIndex(0);
+        setShowLanding(true);
+      }
     });
     return () => unsubscribe();
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('attention_workbook_data', JSON.stringify(data));
-  }, [data]);
+    if (user) {
+      localStorage.setItem(`ar_data_${user.uid}`, JSON.stringify(data));
+    }
+  }, [data, user]);
 
   useEffect(() => {
     const handleScroll = () => {
-      localStorage.setItem('ar_scroll_pos', window.scrollY.toString());
+      if (user) {
+        localStorage.setItem(`ar_scroll_pos_${user.uid}`, window.scrollY.toString());
+      }
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [user]);
 
   useEffect(() => {
-    const savedScroll = localStorage.getItem('ar_scroll_pos');
-    if (savedScroll) {
-      // Use a small timeout to ensure content is rendered before scrolling
-      setTimeout(() => {
-        window.scrollTo(0, parseInt(savedScroll, 10));
-      }, 100);
+    if (user) {
+      const savedScroll = localStorage.getItem(`ar_scroll_pos_${user.uid}`) || localStorage.getItem('ar_scroll_pos');
+      if (savedScroll) {
+        setTimeout(() => {
+          window.scrollTo(0, parseInt(savedScroll, 10));
+        }, 100);
+      }
     }
-  }, [currentPageIndex, showLanding]);
+  }, [currentPageIndex, showLanding, user]);
 
   useEffect(() => {
-    localStorage.setItem('ar_current_page', currentPageIndex.toString());
-  }, [currentPageIndex]);
+    if (user) {
+      localStorage.setItem(`ar_page_${user.uid}`, currentPageIndex.toString());
+    }
+  }, [currentPageIndex, user]);
 
   const updateData = (key, value) => {
     setData(prev => {
@@ -174,7 +199,9 @@ export default function App() {
   };
 
   const handleEnroll = () => {
-    localStorage.setItem('ar_enrolled', '1');
+    if (user) {
+      localStorage.setItem(`ar_enrolled_${user.uid}`, '1');
+    }
     setShowLanding(false);
     window.scrollTo(0, 0);
   };
