@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import Landing from './pages/Landing';
 import Intro from './pages/Intro';
 import Day1 from './pages/Day1';
@@ -199,11 +200,21 @@ export default function App() {
   };
 
   if (!user) {
-    return <Auth onAuth={handleAuth} />;
+    return (
+      <>
+        <Auth onAuth={handleAuth} />
+        <SpeedInsights />
+      </>
+    );
   }
 
   if (showLanding) {
-    return <Landing onEnroll={handleEnroll} />;
+    return (
+      <>
+        <Landing onEnroll={handleEnroll} />
+        <SpeedInsights />
+      </>
+    );
   }
 
   return (
@@ -461,6 +472,7 @@ export default function App() {
           </button>
         </div>
       </footer>
+      <SpeedInsights />
     </div>
   );
 }
