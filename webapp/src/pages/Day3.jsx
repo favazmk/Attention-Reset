@@ -14,11 +14,14 @@ export default function Day3({ data, updateData }) {
   const intensityDone = !!data.d3_level;
   const environmentDone = data.d3_c1 && data.d3_c2 && data.d3_c3;
 
+  const parkingDone = !!(data.d3_park_1?.trim() || data.d3_park_2?.trim() || data.d3_park_3?.trim());
+
   const getMissingTask = () => {
     if (!data.d3_level) return "Choose Your Intensity";
     if (!data.d3_c1) return "Check 'Close every browser tab'";
     if (!data.d3_c2) return "Check 'Put phone in drawer'";
     if (!data.d3_c3) return "Check 'Set your timer'";
+    if (!parkingDone) return "Enter 1 item in The Parking Lot";
     if (!data.d3_r1) return "Reflect: My one task was...";
     if (!data.d3_r2) return "Reflect: The hardest moment was...";
     if (!data.d3_r3) return "Select how you feel";
@@ -27,12 +30,13 @@ export default function Day3({ data, updateData }) {
   const missingTask = getMissingTask();
   const allCompleted = !missingTask;
 
-  const totalTasks = 7;
+  const totalTasks = 8;
   const completedTasks = [
     !!data.d3_level,
     !!data.d3_c1,
     !!data.d3_c2,
     !!data.d3_c3,
+    parkingDone,
     !!data.d3_r1,
     !!data.d3_r2,
     !!data.d3_r3,
@@ -408,9 +412,10 @@ export default function Day3({ data, updateData }) {
               </div>
             </div>
 
-            <div className="reveal-node">
-              {/* --- PHASE 3 --- */}
-              <h3
+            {parkingDone && (
+              <div className="reveal-node">
+                {/* --- PHASE 3 --- */}
+                <h3
                 style={{
                   fontSize: "1.2rem",
                   color: accent,
@@ -553,7 +558,8 @@ export default function Day3({ data, updateData }) {
                   - Plutarch
                 </p>
               </div>
-            </div>
+              </div>
+            )}
           </div>
         )}
       </div>

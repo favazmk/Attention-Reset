@@ -12,6 +12,7 @@ export default function Day1({ data, updateData }) {
 
   const setupDone = data.d1_c0 && data.d1_c1 && data.d1_c2 && data.d1_c3;
   const challengeDone = data.d1_c4;
+  const procrastinationDone = !!(data.d1_p1?.trim() || data.d1_p2?.trim() || data.d1_p3?.trim());
 
   const getMissingTask = () => {
     if (!data.d1_c0) return "Set Reminder";
@@ -19,20 +20,22 @@ export default function Day1({ data, updateData }) {
     if (!data.d1_c2) return "Go Greyscale";
     if (!data.d1_c3) return "Install 'one sec'";
     if (!data.d1_c4) return "Steadfast Attention Challenge";
-    if (!data.d1_reflection) return "Reflection";
+    if (!data.d1_p1 && !data.d1_p2 && !data.d1_p3) return "List 1 procrastination task";
+    if (!data.d1_mission_ack) return "Accept Mission";
     return null;
   };
   const missingTask = getMissingTask();
   const allCompleted = !missingTask;
 
-  const totalTasks = 6;
+  const totalTasks = 7;
   const completedTasks = [
     data.d1_c0,
     data.d1_c1,
     data.d1_c2,
     data.d1_c3,
     data.d1_c4,
-    !!data.d1_reflection
+    procrastinationDone,
+    data.d1_mission_ack
   ].filter(Boolean).length;
 
   const handleFinishDay = () => {
@@ -208,22 +211,83 @@ export default function Day1({ data, updateData }) {
                 letterSpacing: "1px",
               }}
             >
-              REFLECTION
+              THE PROCRASTINATION DUMP
             </h4>
-            <p style={{ marginBottom: "1.5rem" }}>
-              With fewer notifications today, what was one thing you actually{" "}
-              <i>noticed</i> in the real world?
+            <p style={{ marginBottom: "1.5rem", fontSize: "0.95rem" }}>
+              List 3 things you've been procrastinating on for a long time. We're going to clear this backlog.
             </p>
 
             <FillLine
-              id="d1_reflection"
-              label=""
-              value={data.d1_reflection || ""}
-              onChange={(v) => updateData("d1_reflection", v)}
-              lines={3}
+              id="d1_p1"
+              label="1."
+              value={data.d1_p1 || ""}
+              onChange={(v) => updateData("d1_p1", v)}
               accentColor={accent}
-              placeholder="e.g., I noticed the hum of the refrigerator for the first time."
+              placeholder="e.g., Fixing that leaky faucet / Cleaning my inbox"
             />
+            <FillLine
+              id="d1_p2"
+              label="2."
+              value={data.d1_p2 || ""}
+              onChange={(v) => updateData("d1_p2", v)}
+              accentColor={accent}
+              placeholder="e.g., Researching that course I wanted to take"
+            />
+            <FillLine
+              id="d1_p3"
+              label="3."
+              value={data.d1_p3 || ""}
+              onChange={(v) => updateData("d1_p3", v)}
+              accentColor={accent}
+              placeholder="e.g., Calling that old friend"
+            />
+
+            <div className="spacer-md" />
+
+            {procrastinationDone && (
+              <div className="reveal-section reveal-node">
+                <h4
+                  style={{
+                    color: accent,
+                    fontSize: "0.85rem",
+                    marginBottom: "1rem",
+                    letterSpacing: "1px",
+                  }}
+                >
+                  MISSION
+                </h4>
+                <div style={{ 
+                  padding: '24px', 
+                  background: 'rgba(255,255,255,0.03)', 
+                  borderRadius: '12px', 
+                  border: `1px dashed ${accent}44`,
+                  marginBottom: '2rem'
+                }}>
+                  <p style={{ 
+                    fontSize: '1.1rem', 
+                    fontWeight: 600, 
+                    color: accent, 
+                    marginBottom: '0.6rem',
+                    fontFamily: 'var(--font-serif)'
+                  }}>
+                    Your observation starts now.
+                  </p>
+                  <p style={{ fontSize: '0.95rem', color: 'var(--cream)', lineHeight: '1.6', marginBottom: '1.2rem' }}>
+                    Today, notice one thing you usually ignore. <br />
+                    The silence, a taste, or the urge to reach for your phone. <br /><br />
+                    <strong>Just notice it. Record it tomorrow.</strong>
+                  </p>
+                  
+                  <ClickBox
+                    id="d1_mission_ack"
+                    label="I accept my observation mission."
+                    checked={data.d1_mission_ack || false}
+                    onChange={(v) => updateData("d1_mission_ack", v)}
+                    accentColor={accent}
+                  />
+                </div>
+              </div>
+            )}
 
             <div className="spacer-lg" />
 

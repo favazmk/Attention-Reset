@@ -36,13 +36,13 @@ export default function Intro({ data, updateData, introError }) {
       <div className="card" style={{ marginBottom: '2.5rem', background: '#0c0c0c', border: `1px solid ${accent}` }}>
         <h4 style={{ color: accent, marginBottom: '0.75rem', fontSize: '0.85rem', letterSpacing: '1px', textTransform: 'uppercase' }}>Before we begin—</h4>
         <p style={{ color: 'rgba(237,232,220,0.85)', fontSize: '0.95rem', marginBottom: '1rem' }}>What should we call you?</p>
-        
+
         <div style={{ display: 'flex', gap: '8px' }}>
-          <input 
-            type="text" 
-            placeholder="Enter your name..." 
+          <input
+            type="text"
+            placeholder="Enter your name..."
             autoCapitalize="words"
-            value={data.user_name || ''} 
+            value={data.user_name || ''}
             onChange={(e) => {
               updateData('user_name', e.target.value);
               setNameSaved(false);
@@ -50,7 +50,7 @@ export default function Intro({ data, updateData, introError }) {
             onKeyDown={(e) => {
               if (e.key === 'Enter' && data.user_name?.trim()) setNameSaved(true);
             }}
-            style={{ flex: 1, padding: '16px', background: '#131311', border: '1px solid #2C2C26', color: '#EDE8DC', borderRadius: '8px', outline: 'none', fontSize: '1.05rem', fontFamily: 'inherit' }} 
+            style={{ flex: 1, padding: '16px', background: '#131311', border: '1px solid #2C2C26', color: '#EDE8DC', borderRadius: '8px', outline: 'none', fontSize: '1.05rem', fontFamily: 'inherit' }}
           />
           <button
             onClick={() => data.user_name?.trim() && setNameSaved(true)}
@@ -218,7 +218,7 @@ export default function Intro({ data, updateData, introError }) {
           You already know your attention is slipping.
         </p>
         <p style={{ fontSize: '1.5rem', color: 'var(--accent)', fontWeight: 700, letterSpacing: '-0.02em', textTransform: 'uppercase' }}>
-          ITS TIME TO FIX IT.
+          IT'S TIME TO FIX IT.
         </p>
       </div>
 

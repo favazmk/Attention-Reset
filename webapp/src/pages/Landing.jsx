@@ -15,7 +15,7 @@ const DAYS = [
 const FEATURES = [
   {
     title: "7-Day Protocols",
-    value: "₹699 value",
+    value: "₹599 value",
     desc: "Science-backed daily missions designed to rebuild your focus step by step."
   },
   {
@@ -25,7 +25,7 @@ const FEATURES = [
   },
   {
     title: "1 Attention OS Builder",
-    value: "₹399 value",
+    value: "₹99 value",
     desc: "Your permanent post-reset system to protect your focus long-term."
   },
   {
@@ -40,7 +40,7 @@ const FEATURES = [
   },
   {
     title: "11 Focus Blueprint & Audit insights",
-    value: "₹499 value",
+    value: "₹399 value",
     desc: "A clear breakdown of your distractions, patterns, and reclaimed time."
   }
 ];
@@ -59,6 +59,29 @@ export default function Landing({ onEnroll }) {
   const [checkedSymptoms, setCheckedSymptoms] = React.useState({});
   const [activeIndex, setActiveIndex] = React.useState(0);
   const [showSticky, setShowSticky] = React.useState(false);
+  const [touchStart, setTouchStart] = React.useState(null);
+  const [touchOffset, setTouchOffset] = React.useState(0);
+
+  const handleTouchStart = (e) => {
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e) => {
+    if (touchStart === null) return;
+    const currentTouch = e.targetTouches[0].clientX;
+    const diff = currentTouch - touchStart;
+    setTouchOffset(diff);
+  };
+
+  const handleTouchEnd = () => {
+    if (touchOffset > 50 && activeIndex > 0) {
+      setActiveIndex(prev => prev - 1);
+    } else if (touchOffset < -50 && activeIndex < DAYS.length - 1) {
+      setActiveIndex(prev => prev + 1);
+    }
+    setTouchStart(null);
+    setTouchOffset(0);
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -68,6 +91,67 @@ export default function Landing({ onEnroll }) {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  const handlePayment = async () => {
+    try {
+      // 1. Create order on backend
+      const response = await fetch('/api/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: 39900 }) // ₹399
+      });
+      const order = await response.json();
+
+      if (!response.ok) throw new Error(order.error || 'Failed to create order');
+
+      // 2. Open Razorpay Modal
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        amount: order.amount,
+        currency: order.currency,
+        name: "7-Day Attention Reset",
+        description: "Reclaim your focus in one week",
+        order_id: order.id,
+        handler: async function (response) {
+          // 3. Verify payment on backend
+          const verifyRes = await fetch('/api/verify-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature
+            })
+          });
+          const verifyData = await verifyRes.json();
+
+          if (verifyRes.ok) {
+            onEnroll();
+          } else {
+            alert("Payment verification failed: " + verifyData.message);
+          }
+        },
+        prefill: {
+          name: "",
+          email: "",
+          contact: ""
+        },
+        theme: {
+          color: "#F5C842"
+        }
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.on('payment.failed', function (response) {
+        alert("Payment failed: " + response.error.description);
+      });
+      rzp.open();
+
+    } catch (error) {
+      console.error("Checkout error:", error);
+      alert("Checkout failed. Please try again.");
+    }
+  };
 
   const toggleSymptom = (i) => {
     setCheckedSymptoms(prev => ({ ...prev, [i]: !prev[i] }));
@@ -122,22 +206,25 @@ export default function Landing({ onEnroll }) {
         position: relative; 
         overflow: hidden; 
         padding: 2rem 0;
-        margin: 0 -1.25rem; /* Allow cards to blead out for immersion */
-        -webkit-mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
-        mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+        margin: 0 -1.25rem; 
+        -webkit-mask-image: linear-gradient(to right, transparent, black 25%, black 75%, transparent);
+        mask-image: linear-gradient(to right, transparent, black 25%, black 75%, transparent);
+        --card-w: 280px;
+        --card-m: 10px;
       }
       .l-carousel-track { 
         display: flex; 
         transition: transform 0.6s cubic-bezier(0.2, 0, 0.2, 1); 
-        padding: 0 50%; /* Center the first/last card */
+        padding: 0 50%;
+        width: max-content;
       }
       .l-carousel-card { 
-        flex: 0 0 280px; 
+        flex: 0 0 var(--card-w); 
         padding: 1.5rem; 
         background: #1C1C18; 
         border: 1px solid #2C2C26; 
         border-radius: 12px; 
-        margin: 0 10px; 
+        margin: 0 var(--card-m); 
         transition: all 0.5s cubic-bezier(0.2, 0, 0.2, 1);
         cursor: pointer;
         opacity: 0.4;
@@ -220,7 +307,7 @@ export default function Landing({ onEnroll }) {
       @media (max-width:640px) { 
         .l-split, .l-feature-grid { grid-template-columns: 1fr; } 
         .l-h1 { font-size: 2.2rem; }
-        .l-carousel-card { flex: 0 0 240px; }
+        .l-carousel-viewport { --card-w: 260px; }
       }
     `;
     document.head.appendChild(style);
@@ -250,7 +337,7 @@ export default function Landing({ onEnroll }) {
             The reset your brain has been waiting for—<br />
             7 days to a mind that finally finishes what it starts.
           </p>
-          <button className="l-cta" onClick={onEnroll}>
+          <button className="l-cta" onClick={handlePayment}>
             Start the Reset
             <svg
               width="18" height="18" viewBox="0 0 24 24"
@@ -346,11 +433,17 @@ export default function Landing({ onEnroll }) {
           <h2 className="l-h2">Here's what changes —<br /><em>day by day.</em></h2>
           <p className="l-p" style={{ marginBottom: '2rem' }}>Each day features specific exercises and visible outcomes.</p>
 
-          <div className="l-carousel-viewport">
+          <div 
+            className="l-carousel-viewport"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
             <div
               className="l-carousel-track"
               style={{
-                transform: `translateX(calc(-150px - (${activeIndex} * 300px)))`
+                transform: `translateX(calc(-1 * (var(--card-w) / 2 + var(--card-m)) - (${activeIndex} * (var(--card-w) + 2 * var(--card-m))) + ${touchOffset}px))`,
+                transition: touchStart !== null ? 'none' : 'transform 0.6s cubic-bezier(0.2, 0, 0.2, 1)'
               }}
             >
               {DAYS.map((d, i) => (
@@ -435,7 +528,19 @@ export default function Landing({ onEnroll }) {
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px', gap: '12px' }}>
                     <strong style={{ margin: 0, fontSize: '0.95rem' }}>{f.title}</strong>
-                    <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#F5C842', whiteSpace: 'nowrap', padding: '2px 6px', border: '1px solid rgba(245,200,66,0.3)', borderRadius: '4px', textTransform: 'uppercase' }}>{f.value}</span>
+                    <span style={{
+                      fontSize: '0.65rem',
+                      fontWeight: 700,
+                      color: '#F5C842',
+                      whiteSpace: 'nowrap',
+                      padding: '2px 6px',
+                      border: '1px solid rgba(245,200,66,0.3)',
+                      borderRadius: '4px',
+                      textTransform: 'uppercase',
+                      fontFamily: "'Inter', 'DM Sans', sans-serif"
+                    }}>
+                      {f.value}
+                    </span>
                   </div>
                   <div style={{ fontSize: '0.85rem', lineHeight: '1.6', color: 'rgba(237,232,220,0.65)', fontWeight: 300 }}>
                     {f.desc}
@@ -454,11 +559,11 @@ export default function Landing({ onEnroll }) {
             textAlign: 'center'
           }}>
             <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: '#6B6860', marginBottom: '8px' }}>Total Bundle Value</div>
-            <div style={{ fontSize: '2rem', fontFamily: "'DM Serif Display', serif", color: '#FF3B3B', textDecoration: 'line-through', opacity: 0.6, marginBottom: '2rem' }}>₹2,594</div>
+            <div style={{ fontSize: '2rem', fontFamily: "'Inter', sans-serif", color: '#FF3B3B', textDecoration: 'line-through', opacity: 0.6, marginBottom: '2rem', fontWeight: 700 }}>₹2,094</div>
 
             <div style={{ fontSize: '1rem', color: '#F5C842', fontWeight: 600, marginBottom: '0.5rem' }}>You get everything for:</div>
-            <div style={{ fontSize: '3.5rem', fontFamily: "'DM Serif Display', serif", color: '#F5C842', lineHeight: 1 }}>₹399</div>
-            <div style={{ fontSize: '0.9rem', color: '#00E87A', fontWeight: 500, marginTop: '8px', opacity: 0.8 }}>(You Save: ₹2,195)</div>
+            <div style={{ fontSize: '3.5rem', fontFamily: "'Inter', sans-serif", color: '#F5C842', lineHeight: 1, fontWeight: 700 }}>₹399</div>
+            <div style={{ fontSize: '0.9rem', color: '#00E87A', fontWeight: 600, marginTop: '8px', opacity: 0.8, fontFamily: "'Inter', sans-serif" }}>(You Save: ₹1,695)</div>
           </div>
         </div>
       </section>
@@ -493,10 +598,10 @@ export default function Landing({ onEnroll }) {
       <section className="l-section" id="pricing">
         <div className="l-wrap">
           <div className="l-pricing" style={{ marginTop: '0' }}>
-            <div style={{ fontSize: '1.4rem', color: '#6B6860', textDecoration: 'line-through', marginBottom: '2px', fontWeight: 500 }}>₹599</div>
-            <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: '3rem', color: '#F5C842', marginBottom: '4px' }}>₹399</div>
+            <div style={{ fontSize: '1.4rem', color: '#6B6860', textDecoration: 'line-through', marginBottom: '2px', fontWeight: 600, fontFamily: "'Inter', sans-serif" }}>₹599</div>
+            <div style={{ fontFamily: "'Inter', sans-serif", fontSize: '3rem', color: '#F5C842', marginBottom: '4px', fontWeight: 700 }}>₹399</div>
             <div style={{ fontSize: '0.78rem', color: '#6B6860', marginBottom: '1.5rem' }}>Instant access • No subscription • Start today</div>
-            <button className="l-cta" style={{ margin: '0 auto' }} onClick={onEnroll}>
+            <button className="l-cta" style={{ margin: '0 auto' }} onClick={handlePayment}>
               Yes, I Want My Focus Back
               <svg
                 width="18" height="18" viewBox="0 0 24 24"
@@ -566,7 +671,7 @@ export default function Landing({ onEnroll }) {
                   Invest now and take your attention back permanently—and move your life forward.
                 </p>
 
-                <button id="c4" className="l-cta" style={{ margin: '0 auto', background: '#00E87A', boxShadow: '0 8px 16px rgba(0, 232, 122, 0.2)', width: 'fit-content', padding: '16px 48px' }} onClick={onEnroll}>
+                <button id="c4" className="l-cta" style={{ margin: '0 auto', background: '#00E87A', boxShadow: '0 8px 16px rgba(0, 232, 122, 0.2)', width: 'fit-content', padding: '16px 48px' }} onClick={handlePayment}>
                   Start My 7-Day Reset
                   <svg
                     width="18" height="18" viewBox="0 0 24 24"
@@ -632,7 +737,7 @@ export default function Landing({ onEnroll }) {
           <p className="l-label" style={{ textAlign: 'center' }}>7 days. That's all it takes to take control back.</p>
           <h1 className="l-h1" style={{ fontSize: 'clamp(2rem,5vw,2.8rem)', textAlign: 'center' }}>Your attention is <em>still there.</em><br />You just need to reclaim it.</h1>
           <p className="l-p" style={{ maxWidth: '420px', margin: '1.25rem auto 2.5rem', fontSize: '1rem', textAlign: 'center' }}>One programme. Proven protocols. One system that lasts.</p>
-          <button className="l-cta" style={{ margin: '0 auto' }} onClick={onEnroll}>
+          <button className="l-cta" style={{ margin: '0 auto' }} onClick={handlePayment}>
             Start Day 1
             <svg
               width="18" height="18" viewBox="0 0 24 24"
@@ -665,9 +770,9 @@ export default function Landing({ onEnroll }) {
         maxWidth: '380px',
         pointerEvents: showSticky ? 'auto' : 'none',
       }}>
-        <button 
-          className="l-cta" 
-          onClick={onEnroll}
+        <button
+          className="l-cta"
+          onClick={handlePayment}
           style={{
             boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
             opacity: showSticky ? 1 : 0,

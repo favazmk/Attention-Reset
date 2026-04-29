@@ -23,11 +23,14 @@ export default function Day2({ data, updateData }) {
     { id: "d2_a8", text: "People interrupting while you work" },
   ];
 
+  const reflectionDone = !!data.d1_reflection?.trim();
+
   const completedChecks = assassins.filter((a) => data[a.id]).length;
   // Require at least 1 check to progress the reveal logic
   const assassinsDone = completedChecks > 0;
 
   const getMissingTask = () => {
+    if (!data.d1_reflection) return "Record yesterday's discovery";
     if (!data.d2_ref_1) return "Estimate how many hours you lose";
     if (!data.d2_ref_3) return "Identify your peak flow activity";
     if (!data.d2_ref_2) return "Reflect on what you would do with that time";
@@ -36,8 +39,9 @@ export default function Day2({ data, updateData }) {
   const missingTask = getMissingTask();
   const allCompleted = !missingTask;
 
-  const totalTasks = 4;
+  const totalTasks = 5;
   const completedTasks = [
+    !!data.d1_reflection,
     completedChecks > 0,
     !!data.d2_ref_1,
     !!data.d2_ref_3,
@@ -116,7 +120,35 @@ export default function Day2({ data, updateData }) {
       </div>
 
       <div className="reveal-timeline">
-        <div className="reveal-node">
+        <div className="reveal-node" style={{ marginBottom: '3rem' }}>
+          <h4
+            style={{
+              color: accent,
+              fontSize: "0.85rem",
+              marginBottom: "1rem",
+              letterSpacing: "1px",
+            }}
+          >
+            YESTERDAY'S DISCOVERY
+          </h4>
+          <p style={{ marginBottom: "1.5rem", fontSize: "0.95rem", color: "var(--cream)" }}>
+            Yesterday, you noticed one thing you usually ignore. 
+            <strong> What was it?</strong>
+          </p>
+          <FillLine
+            id="d1_reflection"
+            label=""
+            value={data.d1_reflection || ""}
+            onChange={(v) => updateData("d1_reflection", v)}
+            lines={3}
+            accentColor={accent}
+            placeholder="e.g., I noticed how much I enjoy the sound of the wind..."
+          />
+        </div>
+
+        {reflectionDone && (
+          <>
+            <div className="reveal-node">
           <div
             style={{
               display: "flex",
@@ -341,9 +373,11 @@ export default function Day2({ data, updateData }) {
               >
                 - Winifred Gallagher
               </p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </>
+      )}
       </div>
 
       <div className="spacer-lg" />

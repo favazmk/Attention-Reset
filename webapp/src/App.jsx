@@ -29,7 +29,10 @@ export default function App() {
   const [showLanding, setShowLanding] = useState(
     () => !localStorage.getItem('ar_enrolled')
   );
-  const [currentPageIndex, setCurrentPageIndex] = useState(0);
+  const [currentPageIndex, setCurrentPageIndex] = useState(() => {
+    const saved = localStorage.getItem('ar_current_page');
+    return saved ? parseInt(saved, 10) : 0;
+  });
   const [data, setData] = useState(() => {
     const saved = localStorage.getItem('attention_workbook_data');
     if (saved) return JSON.parse(saved);
@@ -64,6 +67,28 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('attention_workbook_data', JSON.stringify(data));
   }, [data]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      localStorage.setItem('ar_scroll_pos', window.scrollY.toString());
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const savedScroll = localStorage.getItem('ar_scroll_pos');
+    if (savedScroll) {
+      // Use a small timeout to ensure content is rendered before scrolling
+      setTimeout(() => {
+        window.scrollTo(0, parseInt(savedScroll, 10));
+      }, 100);
+    }
+  }, [currentPageIndex, showLanding]);
+
+  useEffect(() => {
+    localStorage.setItem('ar_current_page', currentPageIndex.toString());
+  }, [currentPageIndex]);
 
   const updateData = (key, value) => {
     setData(prev => {
