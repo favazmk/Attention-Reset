@@ -55,24 +55,13 @@ export default function App() {
       setUser(authUser);
       if (authUser) {
         // Load user-specific data
-        let savedData = localStorage.getItem(`ar_data_${authUser.uid}`);
-        if (!savedData) {
-          // Fallback to legacy global data if migrating
-          savedData = localStorage.getItem('attention_workbook_data');
-          if (savedData) localStorage.setItem(`ar_data_${authUser.uid}`, savedData);
-        }
+        const savedData = localStorage.getItem(`ar_data_${authUser.uid}`);
         setData(savedData ? JSON.parse(savedData) : {});
 
-        let savedPage = localStorage.getItem(`ar_page_${authUser.uid}`);
-        if (!savedPage) {
-          savedPage = localStorage.getItem('ar_current_page');
-        }
+        const savedPage = localStorage.getItem(`ar_page_${authUser.uid}`);
         setCurrentPageIndex(savedPage ? parseInt(savedPage, 10) : 0);
 
-        let savedEnrolled = localStorage.getItem(`ar_enrolled_${authUser.uid}`);
-        if (!savedEnrolled) {
-          savedEnrolled = localStorage.getItem('ar_enrolled');
-        }
+        const savedEnrolled = localStorage.getItem(`ar_enrolled_${authUser.uid}`);
         setShowLanding(!savedEnrolled);
       } else {
         // Reset state on sign out
