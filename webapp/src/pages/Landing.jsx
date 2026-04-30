@@ -319,20 +319,6 @@ export default function Landing({ onPaymentSuccess, onLoginClick }) {
 
       {/* HERO */}
       <section className="l-hero-container">
-        {onLoginClick && (
-          <button 
-            onClick={onLoginClick}
-            style={{
-              position: 'absolute', top: '24px', right: '24px', zIndex: 10,
-              background: 'transparent', border: '1px solid rgba(245,200,66,0.3)', color: '#F5C842',
-              padding: '8px 16px', borderRadius: '4px', fontSize: '0.8rem', letterSpacing: '1px',
-              textTransform: 'uppercase', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
-              transition: 'all 0.2s'
-            }}
-          >
-            Already Enrolled? Log In
-          </button>
-        )}
         <video
           className="l-video-bg"
           autoPlay
