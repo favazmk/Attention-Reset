@@ -209,7 +209,7 @@ export default function Day2({ data, updateData }) {
             >
               THE 60-SECOND POWER MOVE
             </h4>
-            <div className="card" style={{ backgroundColor: "#1A1800" }}>
+            <div className="card" style={{ borderLeft: `3px solid ${accent}`, backgroundColor: 'rgba(255,255,255,0.03)' }}>
               <h4
                 style={{
                   color: accent,
