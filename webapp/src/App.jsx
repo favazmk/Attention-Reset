@@ -93,7 +93,7 @@ export default function App() {
   }, [user]);
 
   useEffect(() => {
-    if (user) {
+    if (user && !showLanding) {
       const savedScroll = localStorage.getItem(`ar_scroll_pos_${user.uid}`) || localStorage.getItem('ar_scroll_pos');
       if (savedScroll) {
         setTimeout(() => {
@@ -101,7 +101,7 @@ export default function App() {
         }, 100);
       }
     }
-  }, [currentPageIndex, showLanding, user]);
+  }, [showLanding, user]);
 
   useEffect(() => {
     if (user) {
@@ -260,7 +260,12 @@ export default function App() {
   if (showAuth) {
     return (
       <>
-        <Auth onAuth={handleAuth} allowSignUp={true} defaultTab="signup" onBack={() => setShowAuth(false)} />
+        <Auth 
+          onAuth={handleAuth} 
+          allowSignUp={true} 
+          defaultTab={showAuth === 'signin' ? 'signin' : 'signup'} 
+          onBack={() => setShowAuth(false)} 
+        />
         <SpeedInsights />
       </>
     );
@@ -272,7 +277,7 @@ export default function App() {
         <Landing 
           isLoggedIn={!!user}
           isEnrolled={user && !!localStorage.getItem(`ar_enrolled_${user.uid}`)}
-          onStartReset={() => setShowAuth(true)}
+          onStartReset={(mode) => setShowAuth(mode || 'signup')}
           onPaymentSuccess={handlePaymentSuccess} 
           onReturnToCourse={() => setShowLanding(false)}
           onOpenProfile={() => setShowProfile(true)}
