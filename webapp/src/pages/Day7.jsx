@@ -19,7 +19,7 @@ export default function Day7({ data, updateData }) {
       return "Fill: Day 7 Urge Score";
     if (!data.d7_vision) return "Fill: The 30-Day Vision";
     if (!data.d7_testimonial_tags) return "Select: What changed";
-    if (!data.d7_testimonial) return "Fill: Short Response";
+    if (!data.d7_testimonial) return "Fill: Your Response";
     if (!data.d7_testimonial_before) return "Fill: Before Experience";
     if (!data.d7_testimonial_after) return "Fill: After Experience";
     return null;
@@ -405,9 +405,9 @@ export default function Day7({ data, updateData }) {
               })}
             </div>
 
-            {/* Short response */}
+            {/* Response */}
             <h5 style={{ color: accent, fontSize: "0.75rem", letterSpacing: "1px", marginBottom: "0.5rem" }}>
-              SHORT RESPONSE
+              YOUR RESPONSE
             </h5>
             <FillLine
               id="d7_testimonial"
