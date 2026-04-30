@@ -278,6 +278,14 @@ export default function App() {
           onOpenProfile={() => setShowProfile(true)}
         />
         <SpeedInsights />
+        {showProfile && (
+          <ProfileModal 
+            user={user} 
+            onClose={() => setShowProfile(false)} 
+            onSignOut={handleSignOut}
+            clearProgress={handleClearProgress}
+          />
+        )}
       </>
     );
   }
