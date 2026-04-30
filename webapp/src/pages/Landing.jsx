@@ -54,7 +54,7 @@ const FAQS = [
   ['Why will this work when other things didn’t?', 'Because this isn’t information. It’s structured action.'],
 ];
 
-export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn }) {
+export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, isEnrolled, onReturnToCourse, onOpenProfile }) {
   const [openFaq, setOpenFaq] = React.useState(null);
   const [checkedSymptoms, setCheckedSymptoms] = React.useState({});
   const [activeIndex, setActiveIndex] = React.useState(0);
@@ -335,6 +335,35 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn }) 
 
       {/* HERO */}
       <section className="l-hero-container">
+        <div style={{ position: 'absolute', top: '24px', right: '24px', zIndex: 10, display: 'flex', gap: '16px' }}>
+          {!isLoggedIn ? (
+            <button 
+              onClick={() => onStartReset()}
+              style={{
+                background: 'transparent', border: '1px solid rgba(245,200,66,0.3)', color: '#F5C842',
+                padding: '8px 16px', borderRadius: '4px', fontSize: '0.8rem', letterSpacing: '1px',
+                textTransform: 'uppercase', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif"
+              }}
+            >
+              Course Login
+            </button>
+          ) : (
+            <button 
+              onClick={onOpenProfile} 
+              style={{ 
+                display: 'flex', alignItems: 'center', gap: '6px',
+                color: 'rgba(237,232,220,0.8)', background: 'rgba(28,28,24,0.6)', border: '1px solid rgba(237,232,220,0.1)', cursor: 'pointer',
+                fontSize: '0.75rem', letterSpacing: '1px', textTransform: 'uppercase', padding: '8px 16px', borderRadius: '4px'
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+              Profile
+            </button>
+          )}
+        </div>
         <video
           className="l-video-bg"
           autoPlay
@@ -356,8 +385,8 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn }) 
             The reset your brain has been waiting for—<br />
             7 days to a mind that finally finishes what it starts.
           </p>
-          <button className="l-cta" onClick={handlePayment}>
-            Start the Reset
+          <button className="l-cta" onClick={isEnrolled ? onReturnToCourse : handlePayment}>
+            {isEnrolled ? 'Return to Course' : 'Start the Reset'}
             <svg
               width="18" height="18" viewBox="0 0 24 24"
               fill="none" stroke="currentColor" strokeWidth="2.2"
@@ -620,8 +649,8 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn }) 
             <div style={{ fontSize: '1.4rem', color: '#6B6860', textDecoration: 'line-through', marginBottom: '2px', fontWeight: 600, fontFamily: "'Inter', sans-serif" }}>₹599</div>
             <div style={{ fontFamily: "'Inter', sans-serif", fontSize: '3rem', color: '#F5C842', marginBottom: '4px', fontWeight: 700 }}>₹399</div>
             <div style={{ fontSize: '0.78rem', color: '#6B6860', marginBottom: '1.5rem' }}>Instant access • No subscription • Start today</div>
-            <button className="l-cta" style={{ margin: '0 auto' }} onClick={handlePayment}>
-              Yes, I Want My Focus Back
+            <button className="l-cta" style={{ margin: '0 auto' }} onClick={isEnrolled ? onReturnToCourse : handlePayment}>
+              {isEnrolled ? 'Return to Course' : 'Yes, I Want My Focus Back'}
               <svg
                 width="18" height="18" viewBox="0 0 24 24"
                 fill="none" stroke="currentColor" strokeWidth="2.2"
@@ -690,8 +719,8 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn }) 
                   Invest now and take your attention back permanently—and move your life forward.
                 </p>
 
-                <button id="c4" className="l-cta" style={{ margin: '0 auto', background: '#00E87A', boxShadow: '0 8px 16px rgba(0, 232, 122, 0.2)', width: 'fit-content', padding: '16px 48px' }} onClick={handlePayment}>
-                  Start My 7-Day Reset
+                <button id="c4" className="l-cta" style={{ margin: '0 auto', background: '#00E87A', boxShadow: '0 8px 16px rgba(0, 232, 122, 0.2)', width: 'fit-content', padding: '16px 48px' }} onClick={isEnrolled ? onReturnToCourse : handlePayment}>
+                  {isEnrolled ? 'Return to Course' : 'Start My 7-Day Reset'}
                   <svg
                     width="18" height="18" viewBox="0 0 24 24"
                     fill="none" stroke="currentColor" strokeWidth="2.2"
@@ -756,8 +785,8 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn }) 
           <p className="l-label" style={{ textAlign: 'center' }}>7 days. That's all it takes to take control back.</p>
           <h1 className="l-h1" style={{ fontSize: 'clamp(2rem,5vw,2.8rem)', textAlign: 'center' }}>Your attention is <em>still there.</em><br />You just need to reclaim it.</h1>
           <p className="l-p" style={{ maxWidth: '420px', margin: '1.25rem auto 2.5rem', fontSize: '1rem', textAlign: 'center' }}>One programme. Proven protocols. One system that lasts.</p>
-          <button className="l-cta" style={{ margin: '0 auto' }} onClick={handlePayment}>
-            Start Day 1
+          <button className="l-cta" style={{ margin: '0 auto' }} onClick={isEnrolled ? onReturnToCourse : handlePayment}>
+            {isEnrolled ? 'Return to Course' : 'Start Day 1'}
             <svg
               width="18" height="18" viewBox="0 0 24 24"
               fill="none" stroke="currentColor" strokeWidth="2.2"
@@ -791,7 +820,7 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn }) 
       }}>
         <button
           className="l-cta"
-          onClick={handlePayment}
+          onClick={isEnrolled ? onReturnToCourse : handlePayment}
           style={{
             boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
             opacity: showSticky ? 1 : 0,
@@ -803,7 +832,7 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn }) 
             border: '1px solid rgba(255,255,255,0.1)'
           }}
         >
-          Start My Reset
+          {isEnrolled ? 'Return to Course' : 'Start My Reset'}
           <svg
             width="18" height="18" viewBox="0 0 24 24"
             fill="none" stroke="currentColor" strokeWidth="2.5"

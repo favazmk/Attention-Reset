@@ -48,8 +48,12 @@ const Auth = ({ onAuth, allowSignUp = true, defaultTab = 'signin', onBack }) => 
           {isSigningUp ? 'Create Your Account' : 'Welcome Back'}
         </h1>
 
-        <p style={{ color: 'var(--muted)', marginBottom: '2rem' }}>
-          {isSigningUp ? 'Create an account to save your progress.' : 'Sign in to continue your reset.'}
+        <p style={{ color: 'var(--muted)', marginBottom: '2rem', lineHeight: '1.5' }}>
+          {isSigningUp 
+            ? 'Create an account to save your progress.' 
+            : !allowSignUp
+              ? 'If you have enrolled with us before, please enter your details below. If you are a new customer, please proceed to the checkout on the previous page.'
+              : 'Sign in to continue your reset.'}
         </p>
 
         {/* Google Sign-in Button */}
@@ -138,16 +142,12 @@ const Auth = ({ onAuth, allowSignUp = true, defaultTab = 'signin', onBack }) => 
           </button>
         </form>
 
-        {allowSignUp ? (
+        {allowSignUp && (
           <p style={{ marginTop: '2rem', fontSize: '0.9rem' }}>
             {isSigningUp ? 'Already have an account?' : 'Don\'t have an account?'}
             <button onClick={toggleForm} style={{ background: 'none', border: 'none', color: 'var(--day1)', cursor: 'pointer', textDecoration: 'underline', marginLeft: '5px' }}>
               {isSigningUp ? 'Sign In' : 'Sign Up'}
             </button>
-          </p>
-        ) : (
-          <p style={{ marginTop: '2rem', fontSize: '0.85rem', color: 'var(--muted)', maxWidth: '300px', margin: '2rem auto 0' }}>
-            Looking to create an account? You must enroll in the program first.
           </p>
         )}
       </div>
