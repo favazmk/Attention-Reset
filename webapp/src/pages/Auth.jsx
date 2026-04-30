@@ -1,8 +1,8 @@
 
 import React, { useState } from 'react';
 
-const Auth = ({ onAuth }) => {
-  const [isSigningUp, setIsSigningUp] = useState(false);
+const Auth = ({ onAuth, allowSignUp = true, defaultTab = 'signin', onBack }) => {
+  const [isSigningUp, setIsSigningUp] = useState(defaultTab === 'signup');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -29,6 +29,15 @@ const Auth = ({ onAuth }) => {
       backgroundColor: '#101010',
       color: 'var(--cream)'
     }}>
+      {onBack && (
+        <button 
+          onClick={onBack}
+          style={{ position: 'absolute', top: '20px', left: '20px', background: 'none', border: 'none', color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          Back
+        </button>
+      )}
       <div style={{ maxWidth: '400px', width: '100%' }}>
         <h1 style={{
           fontSize: '2rem',
@@ -129,12 +138,18 @@ const Auth = ({ onAuth }) => {
           </button>
         </form>
 
-        <p style={{ marginTop: '2rem', fontSize: '0.9rem' }}>
-          {isSigningUp ? 'Already have an account?' : 'Don\'t have an account?'}
-          <button onClick={toggleForm} style={{ background: 'none', border: 'none', color: 'var(--day1)', cursor: 'pointer', textDecoration: 'underline', marginLeft: '5px' }}>
-            {isSigningUp ? 'Sign In' : 'Sign Up'}
-          </button>
-        </p>
+        {allowSignUp ? (
+          <p style={{ marginTop: '2rem', fontSize: '0.9rem' }}>
+            {isSigningUp ? 'Already have an account?' : 'Don\'t have an account?'}
+            <button onClick={toggleForm} style={{ background: 'none', border: 'none', color: 'var(--day1)', cursor: 'pointer', textDecoration: 'underline', marginLeft: '5px' }}>
+              {isSigningUp ? 'Sign In' : 'Sign Up'}
+            </button>
+          </p>
+        ) : (
+          <p style={{ marginTop: '2rem', fontSize: '0.85rem', color: 'var(--muted)', maxWidth: '300px', margin: '2rem auto 0' }}>
+            Looking to create an account? You must enroll in the program first.
+          </p>
+        )}
       </div>
     </div>
   );

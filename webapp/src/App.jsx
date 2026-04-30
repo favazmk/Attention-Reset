@@ -27,7 +27,8 @@ const PAGES = [
 ];
 
 export default function App() {
-  const [showLanding, setShowLanding] = useState(true);
+  const [pendingSignup, setPendingSignup] = useState(() => localStorage.getItem('pending_signup') === 'true');
+  const [showAuth, setShowAuth] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [data, setData] = useState({});
@@ -54,20 +55,21 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, (authUser) => {
       setUser(authUser);
       if (authUser) {
+        // Clear pending signup since they are now authenticated
+        localStorage.removeItem('pending_signup');
+        setPendingSignup(false);
+        setShowAuth(false);
+
         // Load user-specific data
         const savedData = localStorage.getItem(`ar_data_${authUser.uid}`);
         setData(savedData ? JSON.parse(savedData) : {});
 
         const savedPage = localStorage.getItem(`ar_page_${authUser.uid}`);
         setCurrentPageIndex(savedPage ? parseInt(savedPage, 10) : 0);
-
-        const savedEnrolled = localStorage.getItem(`ar_enrolled_${authUser.uid}`);
-        setShowLanding(!savedEnrolled);
       } else {
         // Reset state on sign out
         setData({});
         setCurrentPageIndex(0);
-        setShowLanding(true);
       }
     });
     return () => unsubscribe();
@@ -98,7 +100,7 @@ export default function App() {
         }, 100);
       }
     }
-  }, [currentPageIndex, showLanding, user]);
+  }, [currentPageIndex, user]);
 
   useEffect(() => {
     if (user) {
@@ -189,11 +191,9 @@ export default function App() {
     }
   };
 
-  const handleEnroll = () => {
-    if (user) {
-      localStorage.setItem(`ar_enrolled_${user.uid}`, '1');
-    }
-    setShowLanding(false);
+  const handlePaymentSuccess = () => {
+    localStorage.setItem('pending_signup', 'true');
+    setPendingSignup(true);
     window.scrollTo(0, 0);
   };
 
@@ -255,18 +255,27 @@ export default function App() {
   };
 
   if (!user) {
-    return (
-      <>
-        <Auth onAuth={handleAuth} />
-        <SpeedInsights />
-      </>
-    );
-  }
+    if (showAuth === 'signin') {
+      return (
+        <>
+          <Auth onAuth={handleAuth} allowSignUp={false} defaultTab="signin" onBack={() => setShowAuth(false)} />
+          <SpeedInsights />
+        </>
+      );
+    }
+    
+    if (pendingSignup) {
+      return (
+        <>
+          <Auth onAuth={handleAuth} allowSignUp={true} defaultTab="signup" />
+          <SpeedInsights />
+        </>
+      );
+    }
 
-  if (showLanding) {
     return (
       <>
-        <Landing onEnroll={handleEnroll} />
+        <Landing onPaymentSuccess={handlePaymentSuccess} onLoginClick={() => setShowAuth('signin')} />
         <SpeedInsights />
       </>
     );

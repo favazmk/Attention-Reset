@@ -54,7 +54,7 @@ const FAQS = [
   ['Why will this work when other things didn’t?', 'Because this isn’t information. It’s structured action.'],
 ];
 
-export default function Landing({ onEnroll }) {
+export default function Landing({ onPaymentSuccess, onLoginClick }) {
   const [openFaq, setOpenFaq] = React.useState(null);
   const [checkedSymptoms, setCheckedSymptoms] = React.useState({});
   const [activeIndex, setActiveIndex] = React.useState(0);
@@ -126,7 +126,7 @@ export default function Landing({ onEnroll }) {
           const verifyData = await verifyRes.json();
 
           if (verifyRes.ok) {
-            onEnroll();
+            onPaymentSuccess();
           } else {
             alert("Payment verification failed: " + verifyData.message);
           }
@@ -319,6 +319,20 @@ export default function Landing({ onEnroll }) {
 
       {/* HERO */}
       <section className="l-hero-container">
+        {onLoginClick && (
+          <button 
+            onClick={onLoginClick}
+            style={{
+              position: 'absolute', top: '24px', right: '24px', zIndex: 10,
+              background: 'transparent', border: '1px solid rgba(245,200,66,0.3)', color: '#F5C842',
+              padding: '8px 16px', borderRadius: '4px', fontSize: '0.8rem', letterSpacing: '1px',
+              textTransform: 'uppercase', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+              transition: 'all 0.2s'
+            }}
+          >
+            Already Enrolled? Log In
+          </button>
+        )}
         <video
           className="l-video-bg"
           autoPlay
