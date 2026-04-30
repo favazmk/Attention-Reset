@@ -11,6 +11,7 @@ import Day6 from './pages/Day6';
 import Day7 from './pages/Day7';
 import Completion from './pages/Completion';
 import Auth from './pages/Auth';
+import ProfileModal from './components/ProfileModal';
 import { auth } from './firebase';
 import {
   GoogleAuthProvider,
@@ -27,6 +28,7 @@ const PAGES = [
 
 export default function App() {
   const [showLanding, setShowLanding] = useState(true);
+  const [showProfile, setShowProfile] = useState(false);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [data, setData] = useState({});
   const [user, setUser] = useState(null);
@@ -205,6 +207,18 @@ export default function App() {
     setShowLanding(false);
     window.scrollTo(0, 0);
   };
+
+  const handleClearProgress = () => {
+    if (window.confirm("Are you sure you want to clear all your progress? This will reset you to Day 1 and cannot be undone.")) {
+      localStorage.removeItem(`ar_data_${user.uid}`);
+      localStorage.removeItem(`ar_page_${user.uid}`);
+      localStorage.removeItem(`ar_scroll_pos_${user.uid}`);
+      setData({});
+      setCurrentPageIndex(0);
+      window.scrollTo(0, 0);
+      setShowProfile(false);
+    }
+  };
   
   const handleAuth = async (authType, credentials) => {
     if (authType === 'google') {
@@ -294,7 +308,20 @@ export default function App() {
           <h1 style={{ fontSize: '0.85rem', fontFamily: 'var(--font-body)', fontWeight: 600, textTransform: 'uppercase', color: 'var(--muted)', margin: 0 }}>
             7-Day Attention Reset
           </h1>
-          <button onClick={handleSignOut} style={{ color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer' }}>Sign Out</button>
+          <button 
+            onClick={() => setShowProfile(true)} 
+            style={{ 
+              display: 'flex', alignItems: 'center', gap: '6px',
+              color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer',
+              fontSize: '0.68rem', letterSpacing: '1px', textTransform: 'uppercase'
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            Profile
+          </button>
         </div>
 
         {/* Progress Track */}
@@ -517,7 +544,7 @@ export default function App() {
 
         <div style={{ textAlign: 'center' }}>
           <button
-            onClick={resetData}
+            onClick={handleClearProgress}
             style={{ color: 'var(--border)', fontSize: '0.75rem', textTransform: 'uppercase', transition: 'color 0.2s' }}
           >
             Reset Workbook
@@ -525,6 +552,14 @@ export default function App() {
         </div>
       </footer>
       <SpeedInsights />
+      {showProfile && (
+        <ProfileModal 
+          user={user} 
+          onClose={() => setShowProfile(false)} 
+          onSignOut={handleSignOut}
+          clearProgress={handleClearProgress}
+        />
+      )}
     </div>
   );
 }
