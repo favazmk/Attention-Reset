@@ -49,11 +49,14 @@ const Auth = ({ onAuth, allowSignUp = true, defaultTab = 'signin', onBack }) => 
         </h1>
 
         <p style={{ color: 'var(--muted)', marginBottom: '2rem', lineHeight: '1.5' }}>
-          {isSigningUp 
-            ? 'Create an account to save your progress.' 
-            : !allowSignUp
-              ? 'If you have enrolled with us before, please enter your details below. If you are a new customer, please proceed to the checkout on the previous page.'
-              : 'Sign in to continue your reset.'}
+          {isSigningUp ? (
+            'Create an account to save your progress.'
+          ) : (
+            <>
+              If you have enrolled with us before, please enter your details below. 
+              If you are a new customer, please <button type="button" onClick={allowSignUp ? toggleForm : onBack} style={{background:'none', border:'none', color:'var(--day1)', textDecoration:'underline', cursor:'pointer', padding:0, fontSize:'inherit', fontFamily:'inherit'}}>sign up here</button> to proceed to checkout.
+            </>
+          )}
         </p>
 
         {/* Google Sign-in Button */}
