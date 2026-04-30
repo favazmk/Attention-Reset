@@ -54,7 +54,7 @@ const FAQS = [
   ['Why will this work when other things didn’t?', 'Because this isn’t information. It’s structured action.'],
 ];
 
-export default function Landing({ onPaymentSuccess, onLoginClick }) {
+export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn }) {
   const [openFaq, setOpenFaq] = React.useState(null);
   const [checkedSymptoms, setCheckedSymptoms] = React.useState({});
   const [activeIndex, setActiveIndex] = React.useState(0);
@@ -93,6 +93,11 @@ export default function Landing({ onPaymentSuccess, onLoginClick }) {
   }, []);
 
   const handlePayment = async () => {
+    if (!isLoggedIn) {
+      onStartReset();
+      return;
+    }
+
     try {
       // 1. Create order on backend
       const response = await fetch('/api/create-order', {

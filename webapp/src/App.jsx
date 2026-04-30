@@ -27,8 +27,8 @@ const PAGES = [
 ];
 
 export default function App() {
-  const [pendingSignup, setPendingSignup] = useState(() => localStorage.getItem('pending_signup') === 'true');
   const [showAuth, setShowAuth] = useState(false);
+  const [showLanding, setShowLanding] = useState(true);
   const [showProfile, setShowProfile] = useState(false);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [data, setData] = useState({});
@@ -55,9 +55,6 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, (authUser) => {
       setUser(authUser);
       if (authUser) {
-        // Clear pending signup since they are now authenticated
-        localStorage.removeItem('pending_signup');
-        setPendingSignup(false);
         setShowAuth(false);
 
         // Load user-specific data
@@ -66,10 +63,14 @@ export default function App() {
 
         const savedPage = localStorage.getItem(`ar_page_${authUser.uid}`);
         setCurrentPageIndex(savedPage ? parseInt(savedPage, 10) : 0);
+
+        const savedEnrolled = localStorage.getItem(`ar_enrolled_${authUser.uid}`);
+        setShowLanding(!savedEnrolled);
       } else {
         // Reset state on sign out
         setData({});
         setCurrentPageIndex(0);
+        setShowLanding(true);
       }
     });
     return () => unsubscribe();
@@ -100,7 +101,7 @@ export default function App() {
         }, 100);
       }
     }
-  }, [currentPageIndex, user]);
+  }, [currentPageIndex, showLanding, user]);
 
   useEffect(() => {
     if (user) {
@@ -192,8 +193,10 @@ export default function App() {
   };
 
   const handlePaymentSuccess = () => {
-    localStorage.setItem('pending_signup', 'true');
-    setPendingSignup(true);
+    if (user) {
+      localStorage.setItem(`ar_enrolled_${user.uid}`, '1');
+    }
+    setShowLanding(false);
     window.scrollTo(0, 0);
   };
 
@@ -254,28 +257,23 @@ export default function App() {
     }
   };
 
-  if (!user) {
-    if (showAuth === 'signin') {
-      return (
-        <>
-          <Auth onAuth={handleAuth} allowSignUp={false} defaultTab="signin" onBack={() => setShowAuth(false)} />
-          <SpeedInsights />
-        </>
-      );
-    }
-    
-    if (pendingSignup) {
-      return (
-        <>
-          <Auth onAuth={handleAuth} allowSignUp={true} defaultTab="signup" />
-          <SpeedInsights />
-        </>
-      );
-    }
-
+  if (showAuth) {
     return (
       <>
-        <Landing onPaymentSuccess={handlePaymentSuccess} onLoginClick={() => setShowAuth('signin')} />
+        <Auth onAuth={handleAuth} allowSignUp={true} defaultTab="signup" onBack={() => setShowAuth(false)} />
+        <SpeedInsights />
+      </>
+    );
+  }
+
+  if (!user || showLanding) {
+    return (
+      <>
+        <Landing 
+          isLoggedIn={!!user}
+          onStartReset={() => setShowAuth(true)}
+          onPaymentSuccess={handlePaymentSuccess} 
+        />
         <SpeedInsights />
       </>
     );
