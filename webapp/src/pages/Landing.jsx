@@ -105,7 +105,7 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
   const handlePayment = async () => {
     if (!isLoggedIn) {
       sessionStorage.setItem('auto_open_checkout', 'true');
-      onStartReset();
+      onStartReset('signup');
       return;
     }
 
@@ -338,7 +338,7 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
         <div style={{ position: 'absolute', top: '24px', right: '24px', zIndex: 10, display: 'flex', gap: '16px' }}>
           {!isLoggedIn ? (
             <button 
-              onClick={() => onStartReset()}
+              onClick={() => onStartReset('signin')}
               style={{
                 background: 'transparent', border: '1px solid rgba(245,200,66,0.3)', color: '#F5C842',
                 padding: '8px 16px', borderRadius: '4px', fontSize: '0.8rem', letterSpacing: '1px',

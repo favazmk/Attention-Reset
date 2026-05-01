@@ -12,7 +12,8 @@ import Day7 from './pages/Day7';
 import Completion from './pages/Completion';
 import Auth from './pages/Auth';
 import ProfileModal from './components/ProfileModal';
-import { auth } from './firebase';
+import { auth, db } from './firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import {
   GoogleAuthProvider,
   signInWithPopup,
@@ -52,20 +53,53 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (authUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
       setUser(authUser);
       if (authUser) {
         setShowAuth(false);
 
-        // Load user-specific data
-        const savedData = localStorage.getItem(`ar_data_${authUser.uid}`);
-        setData(savedData ? JSON.parse(savedData) : {});
+        // Fetch from Firestore
+        let cloudData = {};
+        let cloudPage = 0;
+        let cloudEnrolled = false;
+        
+        try {
+          const docRef = doc(db, 'users', authUser.uid);
+          const docSnap = await getDoc(docRef);
+          
+          if (docSnap.exists()) {
+            const userData = docSnap.data();
+            cloudData = userData.data || {};
+            cloudPage = userData.currentPageIndex || 0;
+            cloudEnrolled = userData.isEnrolled || false;
+          }
+        } catch (error) {
+          console.error("Error fetching from Firestore:", error);
+        }
 
-        const savedPage = localStorage.getItem(`ar_page_${authUser.uid}`);
-        setCurrentPageIndex(savedPage ? parseInt(savedPage, 10) : 0);
+        // Load local data
+        const localDataStr = localStorage.getItem(`ar_data_${authUser.uid}`);
+        const localData = localDataStr ? JSON.parse(localDataStr) : {};
+        const localPageStr = localStorage.getItem(`ar_page_${authUser.uid}`);
+        const localPage = localPageStr ? parseInt(localPageStr, 10) : 0;
+        const localEnrolled = !!localStorage.getItem(`ar_enrolled_${authUser.uid}`);
 
-        const savedEnrolled = localStorage.getItem(`ar_enrolled_${authUser.uid}`);
-        setShowLanding(!savedEnrolled);
+        // Merge logic: prefer cloud if it has more keys, otherwise local
+        const finalData = Object.keys(cloudData).length > Object.keys(localData).length ? cloudData : localData;
+        const finalPage = Math.max(cloudPage, localPage);
+        const finalEnrolled = cloudEnrolled || localEnrolled;
+
+        setData(finalData);
+        setCurrentPageIndex(finalPage);
+        setShowLanding(!finalEnrolled);
+
+        // Sync local to match merged
+        localStorage.setItem(`ar_data_${authUser.uid}`, JSON.stringify(finalData));
+        localStorage.setItem(`ar_page_${authUser.uid}`, finalPage.toString());
+        if (finalEnrolled) {
+          localStorage.setItem(`ar_enrolled_${authUser.uid}`, '1');
+        }
+
       } else {
         // Reset state on sign out
         setData({});
@@ -79,6 +113,7 @@ export default function App() {
   useEffect(() => {
     if (user) {
       localStorage.setItem(`ar_data_${user.uid}`, JSON.stringify(data));
+      setDoc(doc(db, 'users', user.uid), { data }, { merge: true }).catch(console.error);
     }
   }, [data, user]);
 
@@ -106,6 +141,7 @@ export default function App() {
   useEffect(() => {
     if (user) {
       localStorage.setItem(`ar_page_${user.uid}`, currentPageIndex.toString());
+      setDoc(doc(db, 'users', user.uid), { currentPageIndex }, { merge: true }).catch(console.error);
     }
   }, [currentPageIndex, user]);
 
@@ -195,6 +231,7 @@ export default function App() {
   const handlePaymentSuccess = () => {
     if (user) {
       localStorage.setItem(`ar_enrolled_${user.uid}`, '1');
+      setDoc(doc(db, 'users', user.uid), { isEnrolled: true }, { merge: true }).catch(console.error);
     }
     setShowLanding(false);
     window.scrollTo(0, 0);
@@ -209,6 +246,9 @@ export default function App() {
       setCurrentPageIndex(0);
       window.scrollTo(0, 0);
       setShowProfile(false);
+      if (user) {
+        setDoc(doc(db, 'users', user.uid), { data: {}, currentPageIndex: 0 }, { merge: true }).catch(console.error);
+      }
     }
   };
   
