@@ -100,6 +100,19 @@ export default function App() {
           localStorage.setItem(`ar_enrolled_${authUser.uid}`, '1');
         }
 
+        // If local data had things cloud didn't, sync UP to cloud
+        if (
+          Object.keys(localData).length > Object.keys(cloudData).length || 
+          localPage > cloudPage || 
+          (localEnrolled && !cloudEnrolled)
+        ) {
+          setDoc(doc(db, 'users', authUser.uid), {
+            data: finalData,
+            currentPageIndex: finalPage,
+            isEnrolled: finalEnrolled
+          }, { merge: true }).catch(console.error);
+        }
+
       } else {
         // Reset state on sign out
         setData({});
