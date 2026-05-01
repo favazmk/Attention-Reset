@@ -277,7 +277,7 @@ export default function App() {
         setUser(result.user);
       } catch (error) {
         console.error("Google sign-in error:", error);
-        alert(`Google sign-in failed: ${error.message}`);
+        throw error;
       }
     } else if (authType === 'signup') {
       try {
@@ -286,9 +286,9 @@ export default function App() {
       } catch (error) {
         console.error("Signup error:", error.code);
         if (error.code === 'auth/email-already-in-use') {
-          alert('An account already exists with this email address. Please sign in.');
+          throw new Error('email-in-use');
         } else {
-          alert(`Sign up failed: ${error.message}`);
+          throw error;
         }
       }
     } else if (authType === 'signin') {
@@ -297,10 +297,10 @@ export default function App() {
         setUser(userCredential.user);
       } catch (error) {
         console.error("Sign in error:", error.code);
-        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-          alert('Invalid email or password.');
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+          throw new Error('invalid-credential');
         } else {
-          alert(`Sign in failed: ${error.message}`);
+          throw error;
         }
       }
     }

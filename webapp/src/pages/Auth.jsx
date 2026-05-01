@@ -8,9 +8,46 @@ const Auth = ({ onAuth, allowSignUp = true, defaultTab = 'signin', onBack }) => 
 
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleEmailSubmit = (e) => {
+  const [error, setError] = useState(null);
+
+  const handleEmailSubmit = async (e) => {
     e.preventDefault();
-    onAuth(isSigningUp ? 'signup' : 'signin', { email, password });
+    setError(null);
+    
+    const emailLower = email.toLowerCase();
+    const commonTypos = ['@gmqil.', '@gamil.', '@gmail.con', '@gmial.', '@gmai.'];
+    if (commonTypos.some(typo => emailLower.includes(typo))) {
+      setError("Did you mean @gmail.com? Please check your email address for typos.");
+      return;
+    }
+
+    try {
+      await onAuth(isSigningUp ? 'signup' : 'signin', { email, password });
+    } catch (err) {
+      if (err.message === 'email-in-use') {
+        setError(
+          <span>
+            An account already exists with this email. Please <button type="button" onClick={() => { setIsSigningUp(false); setError(null); }} style={{background:'none', border:'none', color:'var(--day1)', textDecoration:'underline', cursor:'pointer', padding:0, fontSize:'inherit', fontFamily:'inherit'}}>sign in</button>.
+          </span>
+        );
+      } else if (err.message === 'invalid-credential') {
+        setError('Invalid email or password. Please try again.');
+      } else {
+        // Strip out "Firebase: " from the message if it exists to look cleaner
+        const msg = err.message ? err.message.replace(/^Firebase:\s*/, '') : 'Something went wrong.';
+        setError(msg);
+      }
+    }
+  };
+
+  const handleGoogleSubmit = async () => {
+    setError(null);
+    try {
+      await onAuth('google');
+    } catch (err) {
+      const msg = err.message ? err.message.replace(/^Firebase:\s*/, '') : 'Something went wrong.';
+      setError(`Google sign-in failed: ${msg}`);
+    }
   };
 
   const toggleForm = () => {
@@ -61,7 +98,7 @@ const Auth = ({ onAuth, allowSignUp = true, defaultTab = 'signin', onBack }) => 
 
         {/* Google Sign-in Button */}
         <button
-          onClick={() => onAuth('google')}
+          onClick={handleGoogleSubmit}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -89,6 +126,22 @@ const Auth = ({ onAuth, allowSignUp = true, defaultTab = 'signin', onBack }) => 
           <span style={{ margin: '0 1rem', fontSize: '0.9rem' }}>OR</span>
           <div style={{ flex: 1, height: '1px', background: 'var(--border)' }}></div>
         </div>
+
+        {error && (
+          <div style={{
+            backgroundColor: 'rgba(255, 59, 59, 0.1)',
+            border: '1px solid rgba(255, 59, 59, 0.3)',
+            color: '#FF3B3B',
+            padding: '1rem',
+            borderRadius: '6px',
+            marginBottom: '1.5rem',
+            fontSize: '0.9rem',
+            lineHeight: '1.4',
+            textAlign: 'left'
+          }}>
+            {error}
+          </div>
+        )}
 
         {/* Email/Password Form */}
         <form onSubmit={handleEmailSubmit}>
