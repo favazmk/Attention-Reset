@@ -93,14 +93,14 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
   }, []);
 
   useEffect(() => {
-    if (isLoggedIn && sessionStorage.getItem('auto_open_checkout') === 'true') {
+    if (isLoggedIn && !isEnrolled && sessionStorage.getItem('auto_open_checkout') === 'true') {
       sessionStorage.removeItem('auto_open_checkout');
       setTimeout(() => {
         handlePayment();
       }, 500);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoggedIn]);
+  }, [isLoggedIn, isEnrolled]);
 
   const handlePayment = async () => {
     if (!isLoggedIn) {

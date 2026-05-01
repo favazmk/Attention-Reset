@@ -54,71 +54,75 @@ export default function App() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
-      setUser(authUser);
-      if (authUser) {
-        setShowAuth(false);
-
-        // Fetch from Firestore
-        let cloudData = {};
-        let cloudPage = 0;
-        let cloudEnrolled = false;
-        
-        try {
-          const docRef = doc(db, 'users', authUser.uid);
-          const docSnap = await getDoc(docRef);
-          
-          if (docSnap.exists()) {
-            const userData = docSnap.data();
-            cloudData = userData.data || {};
-            cloudPage = userData.currentPageIndex || 0;
-            cloudEnrolled = userData.isEnrolled || false;
-          }
-        } catch (error) {
-          console.error("Error fetching from Firestore:", error);
-        }
-
-        // Load local data
-        const localDataStr = localStorage.getItem(`ar_data_${authUser.uid}`);
-        const localData = localDataStr ? JSON.parse(localDataStr) : {};
-        const localPageStr = localStorage.getItem(`ar_page_${authUser.uid}`);
-        const localPage = localPageStr ? parseInt(localPageStr, 10) : 0;
-        const localEnrolled = !!localStorage.getItem(`ar_enrolled_${authUser.uid}`);
-
-        // Merge logic: prefer cloud if it has more keys, otherwise local
-        const finalData = Object.keys(cloudData).length > Object.keys(localData).length ? cloudData : localData;
-        const finalPage = Math.max(cloudPage, localPage);
-        const finalEnrolled = cloudEnrolled || localEnrolled;
-
-        setData(finalData);
-        setCurrentPageIndex(finalPage);
-        setShowLanding(!finalEnrolled);
-
-        // Sync local to match merged
-        localStorage.setItem(`ar_data_${authUser.uid}`, JSON.stringify(finalData));
-        localStorage.setItem(`ar_page_${authUser.uid}`, finalPage.toString());
-        if (finalEnrolled) {
-          localStorage.setItem(`ar_enrolled_${authUser.uid}`, '1');
-        }
-
-        // If local data had things cloud didn't, sync UP to cloud
-        if (
-          Object.keys(localData).length > Object.keys(cloudData).length || 
-          localPage > cloudPage || 
-          (localEnrolled && !cloudEnrolled)
-        ) {
-          setDoc(doc(db, 'users', authUser.uid), {
-            data: finalData,
-            currentPageIndex: finalPage,
-            isEnrolled: finalEnrolled
-          }, { merge: true }).catch(console.error);
-        }
-
-      } else {
+      if (!authUser) {
         // Reset state on sign out
+        setUser(null);
         setData({});
         setCurrentPageIndex(0);
         setShowLanding(true);
+        setShowAuth(false);
+        return;
       }
+
+      // Show processing state by hiding auth modal but waiting to set user
+      setShowAuth(false);
+
+      // Fetch from Firestore
+      let cloudData = {};
+      let cloudPage = 0;
+      let cloudEnrolled = false;
+      
+      try {
+        const docRef = doc(db, 'users', authUser.uid);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+          const userData = docSnap.data();
+          cloudData = userData.data || {};
+          cloudPage = userData.currentPageIndex || 0;
+          cloudEnrolled = userData.isEnrolled || false;
+        }
+      } catch (error) {
+        console.error("Error fetching from Firestore:", error);
+      }
+
+      // Load local data
+      const localDataStr = localStorage.getItem(`ar_data_${authUser.uid}`);
+      const localData = localDataStr ? JSON.parse(localDataStr) : {};
+      const localPageStr = localStorage.getItem(`ar_page_${authUser.uid}`);
+      const localPage = localPageStr ? parseInt(localPageStr, 10) : 0;
+      const localEnrolled = !!localStorage.getItem(`ar_enrolled_${authUser.uid}`);
+
+      // Merge logic: prefer cloud if it has more keys, otherwise local
+      const finalData = Object.keys(cloudData).length > Object.keys(localData).length ? cloudData : localData;
+      const finalPage = Math.max(cloudPage, localPage);
+      const finalEnrolled = cloudEnrolled || localEnrolled;
+
+      // Sync local to match merged
+      localStorage.setItem(`ar_data_${authUser.uid}`, JSON.stringify(finalData));
+      localStorage.setItem(`ar_page_${authUser.uid}`, finalPage.toString());
+      if (finalEnrolled) {
+        localStorage.setItem(`ar_enrolled_${authUser.uid}`, '1');
+      }
+
+      // If local data had things cloud didn't, sync UP to cloud
+      if (
+        Object.keys(localData).length > Object.keys(cloudData).length || 
+        localPage > cloudPage || 
+        (localEnrolled && !cloudEnrolled)
+      ) {
+        setDoc(doc(db, 'users', authUser.uid), {
+          data: finalData,
+          currentPageIndex: finalPage,
+          isEnrolled: finalEnrolled
+        }, { merge: true }).catch(console.error);
+      }
+
+      // Set final state synchronously to prevent UI flash
+      setData(finalData);
+      setCurrentPageIndex(finalPage);
+      setShowLanding(!finalEnrolled);
+      setUser(authUser);
     });
     return () => unsubscribe();
   }, []);
