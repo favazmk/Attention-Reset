@@ -37,7 +37,7 @@ export default function Intro({ data, updateData, introError }) {
         <h4 style={{ color: accent, marginBottom: '0.75rem', fontSize: '0.85rem', letterSpacing: '1px', textTransform: 'uppercase' }}>Before we begin—</h4>
         <p style={{ color: 'rgba(237,232,220,0.85)', fontSize: '0.95rem', marginBottom: '1rem' }}>What should we call you?</p>
 
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <input
             type="text"
             placeholder="Enter your name..."
@@ -50,12 +50,13 @@ export default function Intro({ data, updateData, introError }) {
             onKeyDown={(e) => {
               if (e.key === 'Enter' && data.user_name?.trim()) setNameSaved(true);
             }}
-            style={{ flex: 1, padding: '16px', background: '#131311', border: '1px solid #2C2C26', color: '#EDE8DC', borderRadius: '8px', outline: 'none', fontSize: '1.05rem', fontFamily: 'inherit' }}
+            style={{ flex: '1 1 200px', minWidth: 0, padding: '16px', background: '#131311', border: '1px solid #2C2C26', color: '#EDE8DC', borderRadius: '8px', outline: 'none', fontSize: '1.05rem', fontFamily: 'inherit' }}
           />
           <button
             onClick={() => data.user_name?.trim() && setNameSaved(true)}
             style={{
-              padding: '0 24px',
+              flex: '1 1 auto',
+              padding: '16px 24px',
               background: nameSaved ? '#00E87A' : '#131311',
               color: nameSaved ? '#000' : '#EDE8DC',
               border: `1px solid ${nameSaved ? '#00E87A' : '#2C2C26'}`,
