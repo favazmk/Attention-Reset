@@ -12,6 +12,7 @@ import Day7 from './pages/Day7';
 import Completion from './pages/Completion';
 import Auth from './pages/Auth';
 import ProfileModal from './components/ProfileModal';
+import ConfirmModal from './components/ConfirmModal';
 import { auth, db } from './firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import {
@@ -36,6 +37,8 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [introError, setIntroError] = useState(false);
   const [timeLeft, setTimeLeft] = useState('');
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmModalConfig, setConfirmModalConfig] = useState(null);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -197,14 +200,22 @@ export default function App() {
     return `https://www.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${start}/${end}&details=${details}`;
   };
 
+  const confirmResetData = () => {
+    setData({});
+    setCurrentPageIndex(0);
+    setShowLanding(true);
+    localStorage.removeItem('attention_workbook_data');
+    localStorage.removeItem('ar_enrolled');
+    setShowConfirmModal(false);
+  };
+
   const resetData = () => {
-    if (window.confirm("Are you sure you want to reset all your progress? This cannot be undone.")) {
-      setData({});
-      setCurrentPageIndex(0);
-      setShowLanding(true);
-      localStorage.removeItem('attention_workbook_data');
-      localStorage.removeItem('ar_enrolled');
-    }
+    setConfirmModalConfig({
+      title: "Reset Workbook",
+      message: "Are you sure you want to reset all your progress? This cannot be undone.",
+      onConfirm: confirmResetData
+    });
+    setShowConfirmModal(true);
   };
 
   const handleNext = () => {
@@ -254,19 +265,27 @@ export default function App() {
     window.scrollTo(0, 0);
   };
 
-  const handleClearProgress = () => {
-    if (window.confirm("Are you sure you want to clear all your progress? This will reset you to Day 1 and cannot be undone.")) {
-      localStorage.removeItem(`ar_data_${user.uid}`);
-      localStorage.removeItem(`ar_page_${user.uid}`);
-      localStorage.removeItem(`ar_scroll_pos_${user.uid}`);
-      setData({});
-      setCurrentPageIndex(0);
-      window.scrollTo(0, 0);
-      setShowProfile(false);
-      if (user) {
-        setDoc(doc(db, 'users', user.uid), { data: {}, currentPageIndex: 0 }, { merge: true }).catch(console.error);
-      }
+  const performClearProgress = () => {
+    localStorage.removeItem(`ar_data_${user?.uid}`);
+    localStorage.removeItem(`ar_page_${user?.uid}`);
+    localStorage.removeItem(`ar_scroll_pos_${user?.uid}`);
+    setData({});
+    setCurrentPageIndex(0);
+    window.scrollTo(0, 0);
+    setShowProfile(false);
+    if (user) {
+      setDoc(doc(db, 'users', user.uid), { data: {}, currentPageIndex: 0 }, { merge: true }).catch(console.error);
     }
+    setShowConfirmModal(false);
+  };
+
+  const handleClearProgress = () => {
+    setConfirmModalConfig({
+      title: "Reset Workbook",
+      message: "Are you sure you want to clear all your progress? This will reset you to Day 1 and cannot be undone.",
+      onConfirm: performClearProgress
+    });
+    setShowConfirmModal(true);
   };
   
   const handleAuth = async (authType, credentials) => {
@@ -628,6 +647,15 @@ export default function App() {
           onClose={() => setShowProfile(false)} 
           onSignOut={handleSignOut}
           clearProgress={handleClearProgress}
+        />
+      )}
+      {showConfirmModal && confirmModalConfig && (
+        <ConfirmModal 
+          title={confirmModalConfig.title}
+          message={confirmModalConfig.message}
+          onConfirm={confirmModalConfig.onConfirm}
+          onClose={() => setShowConfirmModal(false)}
+          confirmText="Yes, Reset"
         />
       )}
     </div>
