@@ -1,4 +1,6 @@
 import React, { useEffect } from 'react';
+import PrivacyPolicy from '../components/PrivacyPolicy';
+import TermsAndConditions from '../components/TermsAndConditions';
 
 const DAY_COLORS = ['#00E87A', '#B060FF', '#3BB8E8', '#F5C842', '#00E5C0', '#FF3B3B', '#FF8C00'];
 
@@ -58,7 +60,11 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
   const [openFaq, setOpenFaq] = React.useState(null);
   const [checkedSymptoms, setCheckedSymptoms] = React.useState({});
   const [activeIndex, setActiveIndex] = React.useState(0);
+  const [showPrivacy, setShowPrivacy] = React.useState(false);
+  const [showTerms, setShowTerms] = React.useState(false);
+  const [showContact, setShowContact] = React.useState(false);
   const [showSticky, setShowSticky] = React.useState(false);
+  const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   const [touchStart, setTouchStart] = React.useState(null);
   const [touchOffset, setTouchOffset] = React.useState(0);
 
@@ -317,8 +323,24 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
         z-index: 1;
         pointer-events: none;
       }
+      .l-header { position: sticky; top: 0; z-index: 100; background: rgba(14, 14, 11, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid rgba(44, 44, 38, 0.5); padding: 1rem 0; }
+      .l-header-inner { display: flex; justify-content: space-between; align-items: center; }
+      .l-header-nav { display: flex; gap: 24px; align-items: center; }
+      .l-header-link { color: rgba(237, 232, 220, 0.8); text-decoration: none; font-size: 0.85rem; font-weight: 500; transition: color 0.2s; }
+      .l-header-link:hover { color: #F5C842; }
       @media (max-width:960px) {
         .l-feature-grid { grid-template-columns: 1fr 1fr; }
+      }
+      .l-mobile-menu-btn { display: none; }
+      .l-desktop-auth { display: flex; }
+      .l-mobile-nav { display: none; }
+      @media (max-width:820px) {
+        .l-header-nav { display: none; }
+        .l-desktop-auth { display: none; }
+        .l-mobile-menu-btn { display: flex !important; }
+        .l-mobile-nav { display: flex; flex-direction: column; background: #0E0E0B; padding: 1rem 1.25rem; border-top: 1px solid #2C2C26; position: absolute; top: 100%; left: 0; right: 0; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+        .l-mobile-nav a { color: #EDE8DC; text-decoration: none; padding: 16px 0; font-size: 1rem; border-bottom: 1px solid rgba(44,44,38,0.5); font-weight: 400; }
+        .l-mobile-nav a:last-of-type { border-bottom: none; }
       }
       @media (max-width:640px) { 
         .l-split, .l-feature-grid { grid-template-columns: 1fr; } 
@@ -330,40 +352,145 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
     return () => { const s = document.getElementById('landing-styles'); if (s) s.remove(); };
   }, []);
 
+  if (showPrivacy) {
+    return <PrivacyPolicy onBack={() => { setShowPrivacy(false); window.scrollTo(0, 0); }} />;
+  }
+
+  if (showTerms) {
+    return <TermsAndConditions onBack={() => { setShowTerms(false); window.scrollTo(0, 0); }} />;
+  }
+
   return (
     <div style={{ background: '#0E0E0B', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif", color: '#EDE8DC' }}>
 
+      {/* HEADER */}
+      <header className="l-header">
+        <div className="l-wrap l-header-inner">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '1.25rem', fontFamily: "'DM Serif Display', serif", color: '#EDE8DC', letterSpacing: '0.5px' }}>Deeper Fix</span>
+          </div>
+          <nav className="l-header-nav">
+            <a href="#symptoms" className="l-header-link">Symptoms</a>
+            <a href="#programme" className="l-header-link">The Programme</a>
+            <a href="#inside" className="l-header-link">What's Inside</a>
+            <a href="#pricing" className="l-header-link">Pricing</a>
+            <a href="#faq" className="l-header-link">FAQ</a>
+          </nav>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <button
+              onClick={isEnrolled ? onReturnToCourse : handlePayment}
+              style={{
+                opacity: showSticky ? 1 : 0,
+                pointerEvents: showSticky ? 'auto' : 'none',
+                transform: `translateX(${showSticky ? '0' : '10px'})`,
+                transition: 'all 0.4s cubic-bezier(0.22, 1, 0.36, 1)',
+                background: 'linear-gradient(135deg, #F5C842, #FF8C00)',
+                color: '#0E0E0B',
+                border: 'none',
+                padding: '8px 16px',
+                borderRadius: '4px',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                letterSpacing: '1px',
+                textTransform: 'uppercase',
+                cursor: 'pointer',
+                fontFamily: "'DM Sans', sans-serif",
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: '0 4px 12px rgba(245,200,66,0.2)'
+              }}
+            >
+              {isEnrolled ? 'Return to Course' : 'Start My Reset'}
+            </button>
+
+            <button 
+              className="l-mobile-menu-btn"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              style={{ background: 'none', border: 'none', color: '#EDE8DC', cursor: 'pointer', padding: '4px', display: 'none', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                {isMenuOpen ? (
+                  <path d="M18 6L6 18M6 6l12 12" />
+                ) : (
+                  <path d="M3 12h18M3 6h18M3 18h18" />
+                )}
+              </svg>
+            </button>
+
+            <div className="l-desktop-auth">
+              {!isLoggedIn ? (
+                <button 
+                  onClick={() => onStartReset('signin')}
+                  style={{
+                    background: 'transparent', border: '1px solid rgba(245,200,66,0.3)', color: '#F5C842',
+                    padding: '8px 16px', borderRadius: '4px', fontSize: '0.8rem', letterSpacing: '1px',
+                    textTransform: 'uppercase', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif"
+                  }}
+                >
+                  Course Login
+                </button>
+              ) : (
+                <button 
+                  onClick={onOpenProfile} 
+                  style={{ 
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    color: 'rgba(237,232,220,0.8)', background: 'rgba(28,28,24,0.6)', border: '1px solid rgba(237,232,220,0.1)', cursor: 'pointer',
+                    fontSize: '0.75rem', letterSpacing: '1px', textTransform: 'uppercase', padding: '8px 16px', borderRadius: '4px'
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                  </svg>
+                  Profile
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {isMenuOpen && (
+          <div className="l-mobile-nav">
+            <a href="#symptoms" onClick={() => setIsMenuOpen(false)}>Symptoms</a>
+            <a href="#programme" onClick={() => setIsMenuOpen(false)}>The Programme</a>
+            <a href="#inside" onClick={() => setIsMenuOpen(false)}>What's Inside</a>
+            <a href="#pricing" onClick={() => setIsMenuOpen(false)}>Pricing</a>
+            <a href="#faq" onClick={() => setIsMenuOpen(false)}>FAQ</a>
+            <div style={{ margin: '16px 0', height: '1px', background: '#2C2C26' }} />
+            {!isLoggedIn ? (
+              <button 
+                onClick={() => { setIsMenuOpen(false); onStartReset('signin'); }}
+                style={{
+                  background: 'rgba(245,200,66,0.1)', border: '1px solid rgba(245,200,66,0.3)', color: '#F5C842',
+                  padding: '12px 16px', borderRadius: '4px', fontSize: '0.9rem', letterSpacing: '1px',
+                  textTransform: 'uppercase', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", width: '100%'
+                }}
+              >
+                Course Login
+              </button>
+            ) : (
+              <button 
+                onClick={() => { setIsMenuOpen(false); onOpenProfile(); }} 
+                style={{ 
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                  color: 'rgba(237,232,220,0.8)', background: 'rgba(28,28,24,0.6)', border: '1px solid rgba(237,232,220,0.1)', cursor: 'pointer',
+                  fontSize: '0.9rem', letterSpacing: '1px', textTransform: 'uppercase', padding: '12px 16px', borderRadius: '4px', width: '100%'
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+                My Profile
+              </button>
+            )}
+          </div>
+        )}
+      </header>
+
       {/* HERO */}
       <section className="l-hero-container">
-        <div style={{ position: 'absolute', top: '24px', right: '24px', zIndex: 10, display: 'flex', gap: '16px' }}>
-          {!isLoggedIn ? (
-            <button 
-              onClick={() => onStartReset('signin')}
-              style={{
-                background: 'transparent', border: '1px solid rgba(245,200,66,0.3)', color: '#F5C842',
-                padding: '8px 16px', borderRadius: '4px', fontSize: '0.8rem', letterSpacing: '1px',
-                textTransform: 'uppercase', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif"
-              }}
-            >
-              Course Login
-            </button>
-          ) : (
-            <button 
-              onClick={onOpenProfile} 
-              style={{ 
-                display: 'flex', alignItems: 'center', gap: '6px',
-                color: 'rgba(237,232,220,0.8)', background: 'rgba(28,28,24,0.6)', border: '1px solid rgba(237,232,220,0.1)', cursor: 'pointer',
-                fontSize: '0.75rem', letterSpacing: '1px', textTransform: 'uppercase', padding: '8px 16px', borderRadius: '4px'
-              }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                <circle cx="12" cy="7" r="4"></circle>
-              </svg>
-              Profile
-            </button>
-          )}
-        </div>
         <video
           className="l-video-bg"
           autoPlay
@@ -406,7 +533,7 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
       </section>
 
       {/* SYMPTOM MIRROR */}
-      <section className="l-section" style={{ borderTop: 'none' }}>
+      <section id="symptoms" className="l-section" style={{ borderTop: 'none' }}>
         <div className="l-wrap">
           <p className="l-label">Does this sound familiar?</p>
           <h2 className="l-h2">Signs your attention<br /><em>is being hijacked</em></h2>
@@ -475,7 +602,7 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
       </section>
 
       {/* 7-DAY LADDER */}
-      <section className="l-section">
+      <section id="programme" className="l-section">
         <div className="l-wrap">
           <p className="l-label">The programme</p>
           <h2 className="l-h2">Here's what changes —<br /><em>day by day.</em></h2>
@@ -560,7 +687,7 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
 
 
       {/* INSIDE */}
-      <section className="l-section">
+      <section id="inside" className="l-section">
         <div className="l-wrap">
           <p className="l-label">Your Focus Toolkit</p>
           <h2 className="l-h2">Everything you get to<br /><em>take back control.</em></h2>
@@ -660,12 +787,33 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
                 <path d="M5 12h14M12 5l7 7-7 7" />
               </svg>
             </button>
+            
+            <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '0.85rem', color: 'rgba(237,232,220,0.85)', fontWeight: 400 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00E87A" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              7-Day Money-Back Guarantee — No questions asked
+            </div>
 
             <div style={{ marginTop: '1.5rem', paddingTop: '1.25rem', borderTop: '1px solid #2C2C26' }}>
               <div style={{ fontSize: '0.9rem', color: '#EDE8DC', fontWeight: 500, marginBottom: '4px' }}>Start today.</div>
               <div style={{ fontSize: '0.9rem', color: '#F5C842', fontWeight: 600 }}>See results in 7 days.</div>
             </div>
 
+          </div>
+
+          <div className="l-guarantee" style={{ marginTop: '2rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#F5C842" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              </svg>
+            </div>
+            <h3 style={{ color: '#F5C842', fontFamily: "'DM Serif Display', serif", fontSize: '1.4rem', marginBottom: '0.75rem' }}>7-Day Money-Back Guarantee</h3>
+            <p style={{ color: 'rgba(237,232,220,0.8)', fontSize: '0.95rem', lineHeight: '1.6', margin: 0, fontWeight: 300 }}>
+              Finish the reset.<br />
+              If your focus doesn't improve — get 100% back.<br />
+              No questions. No friction.
+            </p>
           </div>
         </div>
         {/* THE CHOICE */}
@@ -760,7 +908,7 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
 
 
       {/* FAQ */}
-      <section className="l-section">
+      <section id="faq" className="l-section">
         <div className="l-wrap">
           <p className="l-label">Common questions</p>
           <h2 className="l-h2">Before you decide</h2>
@@ -801,48 +949,38 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
       </section>
 
       {/* Footer */}
-      <footer style={{ borderTop: '1px solid #2C2C26', padding: '2rem 0', textAlign: 'center' }}>
-        <div className="l-wrap">
-          <p style={{ fontSize: '0.72rem', color: '#6B6860' }}>© 2025 Favaz MK · 7-Day Attention Reset</p>
+      <footer style={{ borderTop: '1px solid #2C2C26', padding: '4rem 1.25rem', textAlign: 'center', background: '#0A0A08' }}>
+        <div className="l-wrap" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem' }}>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '1.2rem', fontFamily: "'DM Serif Display', serif", color: '#EDE8DC', letterSpacing: '0.5px' }}>© Deeper Fix</span>
+          </div>
+
+          <div style={{ fontSize: '0.85rem', color: '#6B6860', display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
+            {!showContact ? (
+              <button onClick={() => setShowContact(true)} style={{ background: 'none', border: 'none', color: 'rgba(237,232,220,0.7)', cursor: 'pointer', textDecoration: 'underline', padding: '4px 8px', fontSize: 'inherit' }}>Contact / Support</button>
+            ) : (
+              <>
+                <div style={{ color: '#F5C842' }}>Contact / Support</div>
+                <div style={{ color: 'rgba(237,232,220,0.8)' }}>
+                  <a href="mailto:favazmk12@gmail.com" style={{ color: 'inherit', textDecoration: 'none' }}>favazmk12@gmail.com</a>
+                  <span style={{ margin: '0 8px', opacity: 0.5 }}>|</span>
+                  <a href="https://wa.me/919061926060" style={{ color: 'inherit', textDecoration: 'none' }}>WhatsApp: +91 9061926060</a>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', gap: '20px', fontSize: '0.8rem', marginTop: '0.5rem' }}>
+            <button onClick={() => { setShowPrivacy(true); window.scrollTo(0, 0); }} style={{ background: 'none', border: 'none', color: '#6B6860', cursor: 'pointer', textDecoration: 'underline' }}>Privacy Policy</button>
+            <button onClick={() => { setShowTerms(true); window.scrollTo(0, 0); }} style={{ background: 'none', border: 'none', color: '#6B6860', cursor: 'pointer', textDecoration: 'underline' }}>Terms & Conditions</button>
+          </div>
+
+          <p style={{ fontSize: '0.72rem', color: '#4A4840', marginTop: '1rem' }}>© {new Date().getFullYear()} Deeper Fix. All rights reserved.</p>
         </div>
       </footer>
 
-      {/* STICKY CTA */}
-      <div style={{
-        position: 'fixed',
-        bottom: '24px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 1000,
-        width: 'calc(100% - 40px)',
-        maxWidth: '380px',
-        pointerEvents: showSticky ? 'auto' : 'none',
-      }}>
-        <button
-          className="l-cta"
-          onClick={isEnrolled ? onReturnToCourse : handlePayment}
-          style={{
-            boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
-            opacity: showSticky ? 1 : 0,
-            transform: `translateY(${showSticky ? '0' : '100px'})`,
-            transition: 'all 0.6s cubic-bezier(0.22, 1, 0.36, 1)',
-            width: '100%',
-            background: 'linear-gradient(135deg, #F5C842, #FF8C00)',
-            color: '#0E0E0B',
-            border: '1px solid rgba(255,255,255,0.1)'
-          }}
-        >
-          {isEnrolled ? 'Return to Course' : 'Start My Reset'}
-          <svg
-            width="18" height="18" viewBox="0 0 24 24"
-            fill="none" stroke="currentColor" strokeWidth="2.5"
-            strokeLinecap="round" strokeLinejoin="round"
-            style={{ flexShrink: 0 }}
-          >
-            <path d="M5 12h14M12 5l7 7-7 7" />
-          </svg>
-        </button>
-      </div>
+
     </div>
   );
 }
