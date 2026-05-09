@@ -148,6 +148,15 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
           const verifyData = await verifyRes.json();
 
           if (verifyRes.ok) {
+            // Track Meta Pixel Purchase Event
+            if (window.fbq) {
+              window.fbq('track', 'Purchase', {
+                value: 399.00,
+                currency: 'INR'
+              }, {
+                eventID: response.razorpay_order_id
+              });
+            }
             onPaymentSuccess();
           } else {
             alert("Payment verification failed: " + verifyData.message);
