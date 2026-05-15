@@ -17,6 +17,7 @@ export default function AffiliateAdmin({ user, onBack }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [toast, setToast] = useState('');
 
   // Form state
   const [form, setForm] = useState({
@@ -97,7 +98,8 @@ export default function AffiliateAdmin({ user, onBack }) {
   const copyLink = (code) => {
     const link = `${window.location.origin}/#affiliate/${code}`;
     navigator.clipboard.writeText(link);
-    alert('Dashboard link copied to clipboard:\n' + link);
+    setToast('Dashboard link copied: ' + link);
+    setTimeout(() => setToast(''), 4000);
   };
 
   const markAsPaid = async (commissionId) => {
@@ -254,6 +256,31 @@ export default function AffiliateAdmin({ user, onBack }) {
 
   return (
     <div style={styles.root}>
+      {/* Toast Notification */}
+      {toast && (
+        <div style={{
+          position: 'fixed',
+          bottom: '30px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'rgba(245, 200, 66, 0.1)',
+          border: '1px solid rgba(245, 200, 66, 0.3)',
+          color: '#F5C842',
+          padding: '12px 24px',
+          borderRadius: '100px',
+          backdropFilter: 'blur(12px)',
+          fontSize: '0.85rem',
+          fontWeight: '500',
+          zIndex: 1000,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <span style={{ fontSize: '1rem' }}>✓</span> {toast}
+        </div>
+      )}
+
       {/* Header */}
       <div style={styles.header}>
         <button style={styles.backBtn} onClick={onBack}>← Back</button>
