@@ -1049,9 +1049,7 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
 
           <p style={{ fontSize: '0.72rem', color: '#4A4840', marginTop: '1rem' }}>© {new Date().getFullYear()} Deeper Fix. All rights reserved.</p>
         </div>
-        </div>
       </footer>
-
       {/* Checkout Modal */}
       {showCheckoutModal && (
         <CheckoutModal 
