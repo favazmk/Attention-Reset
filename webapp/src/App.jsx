@@ -13,6 +13,8 @@ import Completion from './pages/Completion';
 import Auth from './pages/Auth';
 import ProfileModal from './components/ProfileModal';
 import ConfirmModal from './components/ConfirmModal';
+import AffiliateAdmin from './pages/AffiliateAdmin';
+import InfluencerPortal from './pages/InfluencerPortal';
 import { auth, db } from './firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import {
@@ -39,6 +41,34 @@ export default function App() {
   const [timeLeft, setTimeLeft] = useState('');
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmModalConfig, setConfirmModalConfig] = useState(null);
+  const [showAdmin, setShowAdmin] = useState(false);
+  const [affiliateCode, setAffiliateCode] = useState(null);
+
+  useEffect(() => {
+    const checkHash = () => {
+      const hash = window.location.hash;
+
+      if (hash === '#admin') {
+        setShowAdmin(true);
+        setAffiliateCode(null);
+        return;
+      }
+
+      if (hash.startsWith('#affiliate/')) {
+        const code = hash.replace('#affiliate/', '').split('?')[0].trim().toUpperCase();
+        setAffiliateCode(code || null);
+        setShowAdmin(false);
+        return;
+      }
+
+      setShowAdmin(false);
+      setAffiliateCode(null);
+    };
+
+    checkHash();
+    window.addEventListener('hashchange', checkHash);
+    return () => window.removeEventListener('hashchange', checkHash);
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -332,6 +362,22 @@ export default function App() {
       console.error("Sign out error:", error);
     }
   };
+
+  if (showAdmin) {
+    return <AffiliateAdmin user={user} onBack={() => { setShowAdmin(false); window.location.hash = ''; }} />;
+  }
+
+  if (affiliateCode) {
+    return (
+      <InfluencerPortal
+        couponCode={affiliateCode}
+        onBack={() => {
+          window.location.hash = '';
+          setAffiliateCode(null);
+        }}
+      />
+    );
+  }
 
   if (showAuth) {
     return (

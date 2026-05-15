@@ -47,6 +47,25 @@ export default function ProfileModal({ user, onClose, onSignOut, clearProgress }
           </div>
         </div>
 
+        {/* Admin Access */}
+        {(user?.email === 'favazmk@gmail.com' || user?.email === 'favazmk12@gmail.com') && (
+          <div style={{ marginBottom: '24px' }}>
+            <a 
+              href="#admin"
+              onClick={onClose}
+              style={{
+                display: 'block',
+                width: '100%', padding: '12px', background: 'rgba(245, 200, 66, 0.1)',
+                border: '1px solid rgba(245, 200, 66, 0.3)', color: '#F5C842', borderRadius: '8px',
+                cursor: 'pointer', fontWeight: '600', textAlign: 'center',
+                textDecoration: 'none', letterSpacing: '0.5px'
+              }}
+            >
+              Affiliate Admin Panel
+            </a>
+          </div>
+        )}
+
         {/* Danger Zone */}
         <div style={{ borderTop: '1px solid #2C2C26', paddingTop: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <button 
