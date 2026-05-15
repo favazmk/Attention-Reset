@@ -94,6 +94,12 @@ export default function AffiliateAdmin({ user, onBack }) {
     setCoupons(prev => prev.filter(c => c.id !== couponId));
   };
 
+  const copyLink = (code) => {
+    const link = `${window.location.origin}/#affiliate/${code}`;
+    navigator.clipboard.writeText(link);
+    alert('Dashboard link copied to clipboard:\n' + link);
+  };
+
   const markAsPaid = async (commissionId) => {
     await updateDoc(doc(db, 'commissions', commissionId), { status: 'paid' });
     setCommissions(prev => prev.map(c => c.id === commissionId ? { ...c, status: 'paid' } : c));
@@ -337,6 +343,7 @@ export default function AffiliateAdmin({ user, onBack }) {
                         <td style={{ ...styles.td, color: '#00E87A' }}>{fmt(c.total_commission_earned || 0)}</td>
                         <td style={styles.td}><span style={styles.badge(c.active)}>{c.active ? 'Active' : 'Inactive'}</span></td>
                         <td style={styles.td}>
+                          <button style={styles.actionBtn('#F5C842')} onClick={() => copyLink(c.id)}>Copy Link</button>
                           <button style={styles.actionBtn(c.active ? '#FF3B3B' : '#00E87A')} onClick={() => toggleActive(c.id, c.active)}>
                             {c.active ? 'Disable' : 'Enable'}
                           </button>
