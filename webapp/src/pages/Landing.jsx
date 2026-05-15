@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import PrivacyPolicy from '../components/PrivacyPolicy';
 import TermsAndConditions from '../components/TermsAndConditions';
+import CheckoutModal from '../components/CheckoutModal';
 
 const DAY_COLORS = ['#00E87A', '#B060FF', '#3BB8E8', '#F5C842', '#00E5C0', '#FF3B3B', '#FF8C00'];
 
@@ -71,7 +72,7 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
   const [couponApplied, setCouponApplied] = React.useState(null);
   const [couponLoading, setCouponLoading] = React.useState(false);
   const [couponError, setCouponError] = React.useState('');
-  const [showCouponInput, setShowCouponInput] = React.useState(false);
+  const [showCheckoutModal, setShowCheckoutModal] = React.useState(false);
 
   const ORIGINAL_PRICE = 399;
   const finalPrice = couponApplied
@@ -145,14 +146,20 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
     if (isLoggedIn && !isEnrolled && sessionStorage.getItem('auto_open_checkout') === 'true') {
       sessionStorage.removeItem('auto_open_checkout');
       setTimeout(() => {
-        handlePayment();
+        setShowCheckoutModal(true);
       }, 500);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoggedIn, isEnrolled]);
 
+  const handleStartCheckout = () => {
+    if (isEnrolled) return;
+    setShowCheckoutModal(true);
+  };
+
   const handlePayment = async () => {
     if (!isLoggedIn) {
+      setShowCheckoutModal(false);
       sessionStorage.setItem('auto_open_checkout', 'true');
       onStartReset('signup');
       return;
@@ -429,7 +436,7 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
           </nav>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
             <button
-              onClick={isEnrolled ? onReturnToCourse : handlePayment}
+              onClick={isEnrolled ? onReturnToCourse : handleStartCheckout}
               style={{
                 opacity: showSticky ? 1 : 0,
                 pointerEvents: showSticky ? 'auto' : 'none',
@@ -563,7 +570,7 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
             The reset your brain has been waiting for—<br />
             7 days to a mind that finally finishes what it starts.
           </p>
-          <button className="l-cta" onClick={isEnrolled ? onReturnToCourse : handlePayment}>
+          <button className="l-cta" onClick={isEnrolled ? onReturnToCourse : handleStartCheckout}>
             {isEnrolled ? 'Return to Course' : 'Start the Reset'}
             <svg
               width="18" height="18" viewBox="0 0 24 24"
@@ -843,70 +850,9 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
 
             <div style={{ fontSize: '0.78rem', color: '#6B6860', marginBottom: '1.25rem', marginTop: '4px' }}>Instant access • No subscription • Start today</div>
 
-            {/* Coupon input */}
-            {!isEnrolled && (
-              <div style={{ marginBottom: '1.25rem' }}>
-                {!couponApplied ? (
-                  !showCouponInput ? (
-                    <button
-                      onClick={() => setShowCouponInput(true)}
-                      style={{ background: 'none', border: 'none', color: 'rgba(237,232,220,0.5)', cursor: 'pointer', fontSize: '0.82rem', textDecoration: 'underline', fontFamily: "'DM Sans', sans-serif" }}
-                    >
-                      Have a coupon code?
-                    </button>
-                  ) : (
-                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                      <input
-                        type="text"
-                        value={couponCode}
-                        onChange={e => setCouponCode(e.target.value.toUpperCase())}
-                        onKeyDown={e => e.key === 'Enter' && applyCoupon()}
-                        placeholder="ENTER CODE"
-                        style={{
-                          background: '#0E0E0B',
-                          border: couponError ? '1px solid #FF3B3B' : '1px solid #2C2C26',
-                          color: '#EDE8DC',
-                          padding: '10px 14px',
-                          borderRadius: '4px',
-                          fontSize: '0.9rem',
-                          fontFamily: 'monospace',
-                          letterSpacing: '2px',
-                          width: '160px',
-                          outline: 'none',
-                        }}
-                      />
-                      <button
-                        onClick={applyCoupon}
-                        disabled={couponLoading || !couponCode.trim()}
-                        style={{
-                          background: '#F5C842',
-                          color: '#0E0E0B',
-                          border: 'none',
-                          borderRadius: '4px',
-                          padding: '10px 18px',
-                          cursor: 'pointer',
-                          fontWeight: 700,
-                          fontSize: '0.82rem',
-                          letterSpacing: '1px',
-                          fontFamily: "'DM Sans', sans-serif",
-                          opacity: couponLoading || !couponCode.trim() ? 0.6 : 1,
-                        }}
-                      >
-                        {couponLoading ? '...' : 'Apply'}
-                      </button>
-                    </div>
-                  )
-                ) : (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                    <span style={{ fontSize: '0.82rem', color: '#00E87A' }}>✓ Code <strong>{couponApplied.code}</strong> applied</span>
-                    <button onClick={removeCoupon} style={{ background: 'none', border: 'none', color: '#6B6860', cursor: 'pointer', fontSize: '0.75rem', textDecoration: 'underline', fontFamily: "'DM Sans', sans-serif" }}>Remove</button>
-                  </div>
-                )}
-                {couponError && <div style={{ color: '#FF3B3B', fontSize: '0.8rem', marginTop: '6px' }}>{couponError}</div>}
-              </div>
-            )}
+            {/* Coupon input moved to CheckoutModal */}
 
-            <button className="l-cta" style={{ margin: '0 auto' }} onClick={isEnrolled ? onReturnToCourse : handlePayment}>
+            <button className="l-cta" style={{ margin: '0 auto' }} onClick={isEnrolled ? onReturnToCourse : handleStartCheckout}>
               {isEnrolled ? 'Return to Course' : `Yes, I Want My Focus Back`}
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                 <path d="M5 12h14M12 5l7 7-7 7" />
@@ -992,7 +938,7 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
                   Invest now and take your attention back permanently—and move your life forward.
                 </p>
 
-                <button id="c4" className="l-cta" style={{ margin: '0 auto', background: '#00E87A', boxShadow: '0 8px 16px rgba(0, 232, 122, 0.2)', width: 'fit-content', padding: '16px 48px' }} onClick={isEnrolled ? onReturnToCourse : handlePayment}>
+                <button id="c4" className="l-cta" style={{ margin: '0 auto', background: '#00E87A', boxShadow: '0 8px 16px rgba(0, 232, 122, 0.2)', width: 'fit-content', padding: '16px 48px' }} onClick={isEnrolled ? onReturnToCourse : handleStartCheckout}>
                   {isEnrolled ? 'Return to Course' : 'Start My 7-Day Reset'}
                   <svg
                     width="18" height="18" viewBox="0 0 24 24"
@@ -1058,7 +1004,7 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
           <p className="l-label" style={{ textAlign: 'center' }}>7 days. That's all it takes to take control back.</p>
           <h1 className="l-h1" style={{ fontSize: 'clamp(2rem,5vw,2.8rem)', textAlign: 'center' }}>Your attention is <em>still there.</em><br />You just need to reclaim it.</h1>
           <p className="l-p" style={{ maxWidth: '420px', margin: '1.25rem auto 2.5rem', fontSize: '1rem', textAlign: 'center' }}>One programme. Proven protocols. One system that lasts.</p>
-          <button className="l-cta" style={{ margin: '0 auto' }} onClick={isEnrolled ? onReturnToCourse : handlePayment}>
+          <button className="l-cta" style={{ margin: '0 auto' }} onClick={isEnrolled ? onReturnToCourse : handleStartCheckout}>
             {isEnrolled ? 'Return to Course' : 'Start Day 1'}
             <svg
               width="18" height="18" viewBox="0 0 24 24"
@@ -1103,8 +1049,25 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
 
           <p style={{ fontSize: '0.72rem', color: '#4A4840', marginTop: '1rem' }}>© {new Date().getFullYear()} Deeper Fix. All rights reserved.</p>
         </div>
+        </div>
       </footer>
 
+      {/* Checkout Modal */}
+      {showCheckoutModal && (
+        <CheckoutModal 
+          onClose={() => setShowCheckoutModal(false)}
+          onProceed={handlePayment}
+          originalPrice={ORIGINAL_PRICE}
+          finalPrice={finalPrice}
+          couponCode={couponCode}
+          setCouponCode={setCouponCode}
+          couponApplied={couponApplied}
+          setCouponApplied={setCouponApplied}
+          couponLoading={couponLoading}
+          couponError={couponError}
+          applyCoupon={applyCoupon}
+        />
+      )}
 
     </div>
   );
