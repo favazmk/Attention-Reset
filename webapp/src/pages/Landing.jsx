@@ -145,8 +145,23 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
   useEffect(() => {
     if (isLoggedIn && !isEnrolled && sessionStorage.getItem('auto_open_checkout') === 'true') {
       sessionStorage.removeItem('auto_open_checkout');
+      
+      const savedCouponStr = sessionStorage.getItem('saved_coupon');
+      let restoredCoupon = null;
+      if (savedCouponStr) {
+        try {
+          restoredCoupon = JSON.parse(savedCouponStr);
+          setCouponApplied(restoredCoupon);
+          setCouponCode(restoredCoupon.code);
+        } catch (e) {
+          console.error("Failed to restore coupon", e);
+        }
+        sessionStorage.removeItem('saved_coupon');
+      }
+
       setTimeout(() => {
-        setShowCheckoutModal(true);
+        // Pass the restored coupon directly to handlePayment so it uses it immediately
+        handlePayment(restoredCoupon);
       }, 500);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -157,10 +172,22 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
     setShowCheckoutModal(true);
   };
 
-  const handlePayment = async () => {
+  const handlePayment = async (restoredCoupon = null) => {
+    // Use restoredCoupon if provided (from auto checkout), otherwise use state
+    // To handle event objects passed by React's onClick, we ensure restoredCoupon is not an event
+    const isEvent = restoredCoupon && restoredCoupon.nativeEvent;
+    const activeCoupon = isEvent ? couponApplied : (restoredCoupon || couponApplied);
+    
+    const activePrice = activeCoupon
+      ? Math.round(ORIGINAL_PRICE * (1 - activeCoupon.discount_percent / 100))
+      : ORIGINAL_PRICE;
+
     if (!isLoggedIn) {
       setShowCheckoutModal(false);
       sessionStorage.setItem('auto_open_checkout', 'true');
+      if (activeCoupon) {
+        sessionStorage.setItem('saved_coupon', JSON.stringify(activeCoupon));
+      }
       onStartReset('signup');
       return;
     }
@@ -171,7 +198,7 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          coupon_code: couponApplied?.code || null,
+          coupon_code: activeCoupon?.code || null,
         }),
       });
       const order = await response.json();
@@ -184,8 +211,8 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
         amount: order.amount,
         currency: order.currency,
         name: "7-Day Attention Reset",
-        description: couponApplied
-          ? `${couponApplied.discount_percent}% off with code ${couponApplied.code}`
+        description: activeCoupon
+          ? `${activeCoupon.discount_percent}% off with code ${activeCoupon.code}`
           : "Reclaim your focus in one week",
         order_id: order.id,
         handler: async function (response) {
@@ -197,8 +224,8 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
-              coupon_code: couponApplied?.code || null,
-              final_amount: finalPrice,
+              coupon_code: activeCoupon?.code || null,
+              final_amount: activePrice,
             }),
           });
           const verifyData = await verifyRes.json();
@@ -206,7 +233,7 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
           if (verifyRes.ok) {
             if (window.fbq) {
               window.fbq('track', 'Purchase', {
-                value: finalPrice,
+                value: activePrice,
                 currency: 'INR',
               }, {
                 eventID: response.razorpay_order_id,
