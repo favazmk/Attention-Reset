@@ -1,5 +1,4 @@
 import React, { useRef, useState, useEffect } from 'react';
-import html2canvas from 'html2canvas';
 import ClickBox from '../components/ClickBox';
 
 export default function Completion({ data, updateData, user }) {
@@ -24,10 +23,16 @@ export default function Completion({ data, updateData, user }) {
 
   const d1Score = parseInt(data.d1_total_score) || 0;
   const d7Score = parseInt(data.d7_total_score) || 0;
-  const improvement = (d1Score > 0 && d7Score >= 0) 
-    ? Math.round(((d1Score - d7Score) / d1Score) * 100) 
-    : 0;
-    
+  // Can be negative if someone scored worse on Day 7 — report that honestly
+  // rather than rendering "+-20%" on the one screen people screenshot.
+  const improvement = d1Score > 0 ? Math.round(((d1Score - d7Score) / d1Score) * 100) : 0;
+  const improved = improvement > 0;
+  const improvementLabel = `${improvement > 0 ? '+' : improvement < 0 ? '−' : ''}${Math.abs(improvement)}%`;
+  const shareText = improved
+    ? `I just completed the 7-Day Attention Reset and cut my distractibility by ${improvement}%.`
+    : 'I just completed the 7-Day Attention Reset.';
+
+
   const tags = ((data.d7_testimonial_tags) || 'Focus improved|More control').split('|').filter(Boolean);
 
   const assassinsList = [
@@ -43,8 +48,11 @@ export default function Completion({ data, updateData, user }) {
   const checkedAssassin = assassinsList.find(a => data[a.id]);
   const largestDistraction = checkedAssassin ? checkedAssassin.text : (data.d2_ref_3 || 'Social Media');
 
+  // html2canvas is ~200 kB and only ever needed if someone taps download/share,
+  // so it is fetched at that moment rather than shipped to every visitor.
   const generateCanvas = async () => {
     if (!reportRef.current) return null;
+    const { default: html2canvas } = await import('html2canvas');
     return await html2canvas(reportRef.current, {
       backgroundColor: '#0c0c0c',
       scale: 1.5,
@@ -53,62 +61,67 @@ export default function Completion({ data, updateData, user }) {
     });
   };
 
+  const downloadBlob = (blob) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Attention-Report.png';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleDownloadImage = async () => {
     setIsGenerating(true);
-    const canvas = await generateCanvas();
-    if (canvas) {
-      canvas.toBlob((blob) => {
-        if (!blob) return;
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = "Attention-Report.png";
-        a.click();
-        URL.revokeObjectURL(url);
-      }, 'image/png', 1.0);
+    try {
+      const canvas = await generateCanvas();
+      if (canvas) {
+        canvas.toBlob((blob) => {
+          if (blob) downloadBlob(blob);
+        }, 'image/png', 1.0);
+      }
+    } catch (err) {
+      console.error('Report generation failed', err);
+    } finally {
+      setIsGenerating(false);
     }
-    setIsGenerating(false);
   };
 
   const handleShare = async () => {
     setIsGenerating(true);
-    const canvas = await generateCanvas();
-    if (canvas) {
+    try {
+      const canvas = await generateCanvas();
+      if (!canvas) return;
+
       canvas.toBlob(async (blob) => {
         if (!blob) {
           setIsGenerating(false);
           return;
         }
-        const file = new File([blob], "Attention-Report.png", { type: "image/png" });
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          try {
+
+        const file = new File([blob], 'Attention-Report.png', { type: 'image/png' });
+        try {
+          if (navigator.canShare?.({ files: [file] })) {
             await navigator.share({
               files: [file],
               title: 'My 7-Day Attention Report',
-              text: `I just completed the 7-Day Attention Reset and reduced my distractibility by ${improvement}%!`
+              text: shareText,
             });
-          } catch (err) {
-            console.error("Share failed", err);
+          } else {
+            await navigator.share({
+              title: 'My 7-Day Attention Report',
+              text: shareText,
+              url: window.location.origin,
+            });
           }
-        } else {
-          try {
-             await navigator.share({
-               title: 'My 7-Day Attention Report',
-               text: `I just completed the 7-Day Attention Reset. My distractibility dropped by ${improvement}%!`,
-               url: window.location.origin
-             });
-          } catch(err) {
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = "Attention-Report.png";
-            a.click();
-            URL.revokeObjectURL(url);
-          }
+        } catch {
+          // Sharing unavailable or dismissed — fall back to a plain download.
+          downloadBlob(blob);
+        } finally {
+          setIsGenerating(false);
         }
-        setIsGenerating(false);
       }, 'image/png', 1.0);
-    } else {
+    } catch (err) {
+      console.error('Report generation failed', err);
       setIsGenerating(false);
     }
   };
@@ -177,14 +190,14 @@ export default function Completion({ data, updateData, user }) {
             <div style={{ ...glassCard, border: `1px solid ${accent}` }}>
               <span style={{ ...labelStyle, color: accent }}>Focus Shift</span>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '24px' }}>
-                <span style={{ color: '#EDE8DC', fontSize: '100px', fontWeight: 800, lineHeight: 1, letterSpacing: '-0.04em' }}>+{improvement}%</span>
+                <span style={{ color: improved ? '#EDE8DC' : '#FF8C00', fontSize: '100px', fontWeight: 800, lineHeight: 1, letterSpacing: '-0.04em' }}>{improvementLabel}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', fontSize: '22px', color: '#aaa', fontWeight: 500 }}>
                 <span>Day 1 Urge Level: <strong style={{color: '#EDE8DC'}}>{data.d1_total_score || '-'}</strong></span>
                 <span>Day 7 Urge Level: <strong style={{color: '#EDE8DC'}}>{data.d7_total_score || '-'}</strong></span>
               </div>
               <div style={{ width: '100%', height: '20px', background: 'rgba(255,255,255,0.05)', borderRadius: '10px', overflow: 'hidden' }}>
-                <div style={{ width: `${Math.max(5, improvement)}%`, height: '100%', background: accent, borderRadius: '10px' }} />
+                <div style={{ width: `${Math.min(100, Math.max(5, Math.abs(improvement)))}%`, height: '100%', background: improved ? accent : '#FF8C00', borderRadius: '10px' }} />
               </div>
             </div>
 
@@ -354,12 +367,21 @@ export default function Completion({ data, updateData, user }) {
             <h3 style={{ color: accent, fontSize: '1.4rem', marginBottom: '1rem', fontFamily: '"DM Serif Display", serif' }}>
               Let's secure your progress.
             </h3>
-            <p style={{ color: '#aaa', fontSize: '1.1rem', marginBottom: '2.5rem', maxWidth: '400px', margin: '0 auto', lineHeight: 1.6 }}>
-              Apply for a custom focus framework tailored exactly to your neurobiology, your career, and your absolute worst distractions.
+            <p style={{ color: '#aaa', fontSize: '1.1rem', marginBottom: '2.5rem', maxWidth: '400px', margin: '0 auto 2.5rem auto', lineHeight: 1.6 }}>
+              Tell us what your worst distraction still is and we'll help you build a focus framework
+              around your actual work and routine.
             </p>
-            <button onClick={() => window.location.href = '#'} className="cta-btn" style={{ fontSize: '1.15rem', padding: '20px 48px', letterSpacing: '2px', boxShadow: `0 0 30px ${accent}44`, maxWidth: '400px', margin: '0 auto', display: 'block', borderRadius: '6px', background: accent, color: '#000', border: 'none', fontWeight: 600, cursor: 'pointer' }}>
-              Get My Custom Plan
-            </button>
+            <a
+              href={`https://wa.me/919061926060?text=${encodeURIComponent(
+                "Hi! I just finished the 7-Day Attention Reset and I'd like help building a permanent focus system."
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="cta-btn"
+              style={{ fontSize: '1.15rem', padding: '20px 48px', letterSpacing: '2px', boxShadow: `0 0 30px ${accent}44`, maxWidth: '400px', margin: '0 auto', display: 'block', borderRadius: '6px', background: accent, color: '#000', border: 'none', fontWeight: 600, cursor: 'pointer', textDecoration: 'none', textAlign: 'center' }}
+            >
+              Talk to us on WhatsApp
+            </a>
           </div>
         )}
       </div>

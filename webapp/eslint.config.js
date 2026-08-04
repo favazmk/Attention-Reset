@@ -14,7 +14,7 @@ export default defineConfig([
       reactRefresh.configs.vite,
     ],
     languageOptions: {
-      ecmaVersion: 2020,
+      ecmaVersion: 2022,
       globals: globals.browser,
       parserOptions: {
         ecmaVersion: 'latest',
@@ -24,6 +24,22 @@ export default defineConfig([
     },
     rules: {
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+    },
+  },
+  {
+    // Vercel serverless functions run in Node, not the browser.
+    files: ['api/**/*.js'],
+    languageOptions: {
+      globals: { ...globals.node },
+    },
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
+  {
+    files: ['*.config.js'],
+    languageOptions: {
+      globals: { ...globals.node },
     },
   },
 ])

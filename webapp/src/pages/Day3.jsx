@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import ClickBox from "../components/ClickBox";
 import FillLine from "../components/FillLine";
 import DayProgressBar from "../components/DayProgressBar";
-import Mascot, { PAGE_PATTERNS } from "../components/Mascot";
+import Mascot from "../components/Mascot";
+import { PAGE_PATTERNS } from "../components/pagePatterns";
 import confetti from "canvas-confetti";
 
 export default function Day3({ data, updateData }) {
   const accent = "var(--day3)";
-  const [triggered, setTriggered] = useState(false);
 
   const [showMissingAlert, setShowMissingAlert] = useState(false);
 

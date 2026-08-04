@@ -23,7 +23,7 @@ export default function TermsAndConditions({ onBack }) {
 
           <section>
             <h2 style={{ color: '#F5C842', fontSize: '1.25rem', marginBottom: '0.75rem' }}>3. Refund Policy</h2>
-            <p>We offer a 7-Day Money-Back Guarantee. However, this refund is conditional upon your active participation. To be eligible for a full refund, you must complete the entire 7-day reset programme. If, after completing all days and exercises, you do not feel a clear improvement in your focus, clarity, and control, you may request a 100% refund. No questions asked, and no friction.</p>
+            <p>We offer a 7-Day Money-Back Guarantee, and it works exactly as described on our home page: complete the 7-day programme, and if you do not feel a clear improvement in your focus, clarity, and control, email us within 7 days of finishing for a 100% refund. We will not ask you to justify the request or complete any additional steps. Because eligibility depends on completing the programme, refund requests from accounts that have not finished all 7 days cannot be processed under this guarantee — if you are having trouble finishing, contact us and we will help.</p>
           </section>
 
           <section>
