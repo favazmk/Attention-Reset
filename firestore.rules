@@ -1,0 +1,50 @@
+rules_version = '2';
+
+// Deploy with:  firebase deploy --only firestore:rules
+//
+// The Admin SDK used by /api bypasses these rules entirely, which is the point:
+// anything that decides whether someone has paid is written only by the server.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Fields the browser must never be able to write to its own user document.
+    // Without this, "am I enrolled?" is a self-answered question and the paywall
+    // is decoration.
+    function serverOwnedFields() {
+      return ['isEnrolled', 'enrolled_at', 'last_payment_id'];
+    }
+
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+
+      allow create: if isOwner(userId)
+        && !request.resource.data.keys().hasAny(serverOwnedFields());
+
+      allow update: if isOwner(userId)
+        && !request.resource.data.diff(resource.data).affectedKeys()
+              .hasAny(serverOwnedFields());
+
+      // Accounts are removed through Firebase Auth, not by the client.
+      allow delete: if false;
+    }
+
+    // Payment records. Server-only, in both directions — the browser has no
+    // reason to read another person's order history or write its own.
+    match /orders/{orderId} {
+      allow read, write: if false;
+    }
+
+    match /purchases/{paymentId} {
+      allow read, write: if false;
+    }
+
+    // Anything not matched above is denied.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

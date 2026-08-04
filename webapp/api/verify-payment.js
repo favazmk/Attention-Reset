@@ -1,112 +1,126 @@
 import crypto from 'crypto';
-import { getAdminDb, FieldValue } from './_firebase-admin.js';
+import { verifyRequest } from './_firebase-admin.js';
+import { getRazorpay, grantEntitlement } from './_entitlement.js';
+import { PRICE_PAISE } from './_pricing.js';
+
+const META_PIXEL_ID = '799577566351233';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const {
-    razorpay_order_id,
-    razorpay_payment_id,
-    razorpay_signature,
-    coupon_code,
-    final_amount, // in rupees
-  } = req.body;
+  const user = await verifyRequest(req);
+  if (!user) {
+    return res.status(401).json({ error: 'Not signed in.' });
+  }
+
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body || {};
 
   if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
     return res.status(400).json({ error: 'Missing required payment fields' });
   }
 
-  // ── Verify Razorpay signature ────────────────────────────────────────────────
-  const secret = process.env.RAZORPAY_KEY_SECRET;
-  const hmac = crypto.createHmac('sha256', secret);
-  hmac.update(razorpay_order_id + '|' + razorpay_payment_id);
-  const generated_signature = hmac.digest('hex');
+  // ── 1. Signature check — proves Razorpay produced this order/payment pair ────
+  const expected = crypto
+    .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+    .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+    .digest('hex');
 
-  if (generated_signature !== razorpay_signature) {
+  const provided = Buffer.from(String(razorpay_signature), 'utf8');
+  const computed = Buffer.from(expected, 'utf8');
+  const signatureValid =
+    provided.length === computed.length && crypto.timingSafeEqual(provided, computed);
+
+  if (!signatureValid) {
     return res.status(400).json({ status: 'failure', message: 'Invalid payment signature' });
   }
 
-  // ── Payment verified — record commission if coupon was used ──────────────────
-  if (coupon_code) {
-    try {
-      const db = getAdminDb();
-      const normalizedCode = coupon_code.toUpperCase().trim();
-
-      // Fetch coupon data again for accuracy
-      const couponRef = db.collection('coupons').doc(normalizedCode);
-      const couponSnap = await couponRef.get();
-
-      if (couponSnap.exists) {
-        const coupon = couponSnap.data();
-        const originalPrice = 399;
-        const saleAmount = final_amount || Math.round(originalPrice * (1 - coupon.discount_percent / 100));
-        const commissionAmount = Math.round(saleAmount * (coupon.commission_percent / 100) * 100) / 100;
-        const discountAmount = originalPrice - saleAmount;
-
-        // Write commission record
-        await db.collection('commissions').add({
-          coupon_code: normalizedCode,
-          influencer_name: coupon.influencer_name,
-          influencer_email: coupon.influencer_email,
-          order_id: razorpay_order_id,
-          payment_id: razorpay_payment_id,
-          original_amount: originalPrice,
-          discount_amount: discountAmount,
-          sale_amount: saleAmount,
-          commission_amount: commissionAmount,
-          commission_percent: coupon.commission_percent,
-          status: 'pending', // pending → paid (updated manually from admin panel)
-          timestamp: FieldValue.serverTimestamp(),
-        });
-
-        // Increment coupon usage stats
-        await couponRef.update({
-          total_uses: FieldValue.increment(1),
-          total_commission_earned: FieldValue.increment(commissionAmount),
-        });
-      }
-    } catch (err) {
-      // Log but don't fail the payment verification
-      console.error('Commission recording error:', err);
-    }
-  }
-
-  // ── Meta Conversions API ─────────────────────────────────────────────────────
+  // ── 2. Ask Razorpay what actually happened ──────────────────────────────────
+  // A valid signature only proves the pair is genuine. It says nothing about who
+  // owns the order or how much was paid, so both come from Razorpay, not the body.
+  let order;
   try {
-    const pixelId = '799577566351233';
-    const accessToken = process.env.META_CAPI_TOKEN;
-
-    if (accessToken) {
-      const eventData = {
-        data: [
-          {
-            event_name: 'Purchase',
-            event_time: Math.floor(Date.now() / 1000),
-            action_source: 'website',
-            event_id: razorpay_order_id,
-            custom_data: {
-              currency: 'INR',
-              value: final_amount || 399.00,
-            },
-            user_data: {
-              client_ip_address: req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '0.0.0.0',
-              client_user_agent: req.headers['user-agent'] || '',
-            },
-          },
-        ],
-      };
-
-      fetch(`https://graph.facebook.com/v19.0/${pixelId}/events?access_token=${accessToken}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(eventData),
-      }).catch(err => console.error('Meta CAPI Request Error:', err));
-    }
-  } catch (e) {
-    console.error('Meta CAPI setup error:', e);
+    order = await getRazorpay().orders.fetch(razorpay_order_id);
+  } catch (err) {
+    console.error('Order fetch failed:', err);
+    return res.status(502).json({ status: 'failure', message: 'Could not confirm the payment. Please contact support.' });
   }
 
-  return res.status(200).json({ status: 'success', message: 'Payment verified successfully' });
+  if (order.notes?.uid !== user.uid) {
+    return res.status(403).json({ status: 'failure', message: 'This order belongs to another account.' });
+  }
+
+  if (order.status !== 'paid') {
+    return res.status(409).json({ status: 'pending', message: 'Payment has not been captured yet.' });
+  }
+
+  if (Number(order.amount_paid) < PRICE_PAISE) {
+    console.error(`Underpaid order ${order.id}: ${order.amount_paid} < ${PRICE_PAISE}`);
+    return res.status(400).json({ status: 'failure', message: 'Payment amount did not match.' });
+  }
+
+  // ── 3. Grant access (idempotent — replays are recognised and do nothing) ────
+  let firstTime;
+  try {
+    ({ firstTime } = await grantEntitlement({
+      uid: user.uid,
+      orderId: order.id,
+      paymentId: razorpay_payment_id,
+      amountPaise: Number(order.amount_paid),
+    }));
+  } catch (err) {
+    console.error('Entitlement grant failed:', err);
+    return res.status(500).json({
+      status: 'failure',
+      message: 'Your payment went through but access could not be enabled. Please contact support.',
+    });
+  }
+
+  // ── 4. Meta Conversions API — only on the first grant, never on replays ─────
+  if (firstTime) {
+    sendPurchaseEvent(req, {
+      orderId: order.id,
+      valueRupees: Number(order.amount_paid) / 100,
+      email: user.email,
+    });
+  }
+
+  return res.status(200).json({ status: 'success', enrolled: true });
+}
+
+function sha256(value) {
+  return crypto.createHash('sha256').update(value).digest('hex');
+}
+
+function sendPurchaseEvent(req, { orderId, valueRupees, email }) {
+  const accessToken = process.env.META_CAPI_TOKEN;
+  if (!accessToken) return;
+
+  const userData = {
+    client_ip_address: (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || undefined,
+    client_user_agent: req.headers['user-agent'] || undefined,
+  };
+  // A hashed email materially improves Meta's match rate, which is the entire
+  // reason the CAPI integration exists.
+  if (email) userData.em = [sha256(email.trim().toLowerCase())];
+
+  const payload = {
+    data: [
+      {
+        event_name: 'Purchase',
+        event_time: Math.floor(Date.now() / 1000),
+        action_source: 'website',
+        event_id: orderId, // matches the browser pixel's eventID, so Meta dedupes
+        custom_data: { currency: 'INR', value: valueRupees },
+        user_data: userData,
+      },
+    ],
+  };
+
+  fetch(`https://graph.facebook.com/v19.0/${META_PIXEL_ID}/events?access_token=${accessToken}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  }).catch((err) => console.error('Meta CAPI request error:', err.message));
 }

@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: webapp
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: webapp/package-lock.json
+
+      # `npm install`, not `npm ci`, on purpose.
+      #
+      # Rolldown (via Vite 8) pulls in @napi-rs/wasm-runtime as an optional dep
+      # that declares @emnapi/core and @emnapi/runtime as PEER deps. On Windows
+      # that optional package is skipped, so its peers never make it into the
+      # lockfile; on Linux npm wants them and `npm ci` aborts with
+      # "Missing: @emnapi/core from lock file". A lockfile generated on Windows
+      # therefore cannot satisfy `npm ci` on Linux at all.
+      #
+      # Vercel builds with `npm install` for the same reason, so this also keeps
+      # CI matching the actual deploy path. Switch back to `npm ci` if the
+      # lockfile ever gets regenerated on Linux.
+      - name: Install
+        run: npm install --no-audit --no-fund
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build

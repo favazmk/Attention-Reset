@@ -2,8 +2,12 @@ import React, { useEffect } from 'react';
 import PrivacyPolicy from '../components/PrivacyPolicy';
 import TermsAndConditions from '../components/TermsAndConditions';
 import CheckoutModal from '../components/CheckoutModal';
+import Toast from '../components/Toast';
+import { authedPost } from '../api';
 
-const DAY_COLORS = ['#00E87A', '#B060FF', '#3BB8E8', '#F5C842', '#00E5C0', '#FF3B3B', '#FF8C00'];
+const PRICE = 99;
+const PREVIOUS_PRICE = 399;
+const BUNDLE_VALUE = 2094;
 
 const DAYS = [
   { n: '01', color: '#00E87A', title: 'The Digital Kill-Switch', action: 'Stop the pings. Start the progress.', feel: 'Lighter. Less reactive.' },
@@ -67,48 +71,12 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
   const [showSticky, setShowSticky] = React.useState(false);
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
 
-  // ── Coupon state ────────────────────────────────────────────────────────────
-  const [couponCode, setCouponCode] = React.useState('');
-  const [couponApplied, setCouponApplied] = React.useState(null);
-  const [couponLoading, setCouponLoading] = React.useState(false);
-  const [couponError, setCouponError] = React.useState('');
   const [showCheckoutModal, setShowCheckoutModal] = React.useState(false);
+  const [checkoutBusy, setCheckoutBusy] = React.useState(false);
+  const [toast, setToast] = React.useState(null);
 
-  const ORIGINAL_PRICE = 399;
-  const finalPrice = couponApplied
-    ? Math.round(ORIGINAL_PRICE * (1 - couponApplied.discount_percent / 100))
-    : ORIGINAL_PRICE;
+  const dismissToast = React.useCallback(() => setToast(null), []);
 
-  const applyCoupon = async () => {
-    if (!couponCode.trim()) return;
-    setCouponLoading(true);
-    setCouponError('');
-    try {
-      const res = await fetch('/api/validate-coupon', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: couponCode }),
-      });
-      const data = await res.json();
-      if (data.valid) {
-        setCouponApplied(data);
-        setCouponError('');
-      } else {
-        setCouponApplied(null);
-        setCouponError(data.error || 'Invalid coupon code');
-      }
-    } catch {
-      setCouponError('Could not validate coupon. Try again.');
-    } finally {
-      setCouponLoading(false);
-    }
-  };
-
-  const removeCoupon = () => {
-    setCouponApplied(null);
-    setCouponCode('');
-    setCouponError('');
-  };
   const [touchStart, setTouchStart] = React.useState(null);
   const [touchOffset, setTouchOffset] = React.useState(0);
 
@@ -142,121 +110,115 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Meta needs mid-funnel signal to optimise against — a ₹99 product will never
+  // hit the purchase volume that Purchase-only optimisation requires.
+  useEffect(() => {
+    if (window.fbq) window.fbq('track', 'ViewContent', { content_name: '7-Day Attention Reset', value: PRICE, currency: 'INR' });
+  }, []);
+
+  // Someone who clicked "buy" before signing up gets dropped straight back into
+  // checkout once their account exists.
   useEffect(() => {
     if (isLoggedIn && !isEnrolled && sessionStorage.getItem('auto_open_checkout') === 'true') {
       sessionStorage.removeItem('auto_open_checkout');
-      
-      const savedCouponStr = sessionStorage.getItem('saved_coupon');
-      let restoredCoupon = null;
-      if (savedCouponStr) {
-        try {
-          restoredCoupon = JSON.parse(savedCouponStr);
-          setCouponApplied(restoredCoupon);
-          setCouponCode(restoredCoupon.code);
-        } catch (e) {
-          console.error("Failed to restore coupon", e);
-        }
-        sessionStorage.removeItem('saved_coupon');
-      }
-
-      setTimeout(() => {
-        // Pass the restored coupon directly to handlePayment so it uses it immediately
-        handlePayment(restoredCoupon);
-      }, 500);
+      const timer = setTimeout(() => handlePayment(), 500);
+      return () => clearTimeout(timer);
     }
+    return undefined;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoggedIn, isEnrolled]);
 
   const handleStartCheckout = () => {
     if (isEnrolled) return;
+    if (window.fbq) window.fbq('track', 'InitiateCheckout', { value: PRICE, currency: 'INR' });
     setShowCheckoutModal(true);
   };
 
-  const handlePayment = async (restoredCoupon = null) => {
-    // Use restoredCoupon if provided (from auto checkout), otherwise use state
-    // To handle event objects passed by React's onClick, we ensure restoredCoupon is not an event
-    const isEvent = restoredCoupon && restoredCoupon.nativeEvent;
-    const activeCoupon = isEvent ? couponApplied : (restoredCoupon || couponApplied);
-    
-    const activePrice = activeCoupon
-      ? Math.round(ORIGINAL_PRICE * (1 - activeCoupon.discount_percent / 100))
-      : ORIGINAL_PRICE;
+  const handlePayment = async () => {
+    if (checkoutBusy) return;
 
     if (!isLoggedIn) {
       setShowCheckoutModal(false);
       sessionStorage.setItem('auto_open_checkout', 'true');
-      if (activeCoupon) {
-        sessionStorage.setItem('saved_coupon', JSON.stringify(activeCoupon));
-      }
       onStartReset('signup');
       return;
     }
 
+    setCheckoutBusy(true);
+
     try {
-      // 1. Create order — pass coupon code if applied
-      const response = await fetch('/api/create-order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          coupon_code: activeCoupon?.code || null,
-        }),
-      });
-      const order = await response.json();
+      // The server decides the amount. Nothing about the price travels from here.
+      const order = await authedPost('/api/create-order');
 
-      if (!response.ok) throw new Error(order.error || 'Failed to create order');
+      // Close our modal before Razorpay's opens, so cancelling doesn't leave the
+      // user staring at a stale order summary.
+      setShowCheckoutModal(false);
 
-      // 2. Open Razorpay Modal
-      const options = {
+      const rzp = new window.Razorpay({
         key: import.meta.env.VITE_RAZORPAY_KEY_ID,
         amount: order.amount,
         currency: order.currency,
-        name: "7-Day Attention Reset",
-        description: activeCoupon
-          ? `${activeCoupon.discount_percent}% off with code ${activeCoupon.code}`
-          : "Reclaim your focus in one week",
+        name: '7-Day Attention Reset',
+        description: 'Reclaim your focus in one week',
         order_id: order.id,
         handler: async function (response) {
-          // 3. Verify payment
-          const verifyRes = await fetch('/api/verify-payment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
+          try {
+            await authedPost('/api/verify-payment', {
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
-              coupon_code: activeCoupon?.code || null,
-              final_amount: activePrice,
-            }),
-          });
-          const verifyData = await verifyRes.json();
+            });
 
-          if (verifyRes.ok) {
             if (window.fbq) {
-              window.fbq('track', 'Purchase', {
-                value: activePrice,
-                currency: 'INR',
-              }, {
-                eventID: response.razorpay_order_id,
-              });
+              window.fbq(
+                'track',
+                'Purchase',
+                { value: PRICE, currency: 'INR' },
+                { eventID: response.razorpay_order_id }
+              );
             }
             onPaymentSuccess();
-          } else {
-            alert("Payment verification failed: " + verifyData.message);
+          } catch (error) {
+            console.error('Verification error:', error);
+            setToast({
+              tone: 'error',
+              message:
+                'Your payment went through but we could not unlock the course automatically. Refresh the page — if it is still locked, message us on WhatsApp and we will fix it right away.',
+            });
+          } finally {
+            setCheckoutBusy(false);
           }
         },
-        prefill: { name: "", email: "", contact: "" },
-        theme: { color: "#F5C842" },
-      };
-
-      const rzp = new window.Razorpay(options);
-      rzp.on('payment.failed', function (response) {
-        alert("Payment failed: " + response.error.description);
+        modal: {
+          ondismiss: () => setCheckoutBusy(false),
+        },
+        prefill: { name: '', email: '', contact: '' },
+        theme: { color: '#F5C842' },
       });
-      rzp.open();
 
+      rzp.on('payment.failed', function (response) {
+        setCheckoutBusy(false);
+        setToast({
+          tone: 'error',
+          message: `Payment failed: ${response.error?.description || 'please try again.'}`,
+        });
+      });
+
+      rzp.open();
     } catch (error) {
-      console.error("Checkout error:", error);
-      alert("Checkout failed. Please try again.");
+      console.error('Checkout error:', error);
+      setCheckoutBusy(false);
+
+      if (error.data?.error === 'already_enrolled') {
+        setShowCheckoutModal(false);
+        onPaymentSuccess();
+        return;
+      }
+
+      setToast({
+        tone: 'error',
+        message: error.message || 'Could not start checkout. Please try again.',
+      });
     }
   };
 
@@ -819,11 +781,11 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
             textAlign: 'center'
           }}>
             <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: '#6B6860', marginBottom: '8px' }}>Total Bundle Value</div>
-            <div style={{ fontSize: '2rem', fontFamily: "'Inter', sans-serif", color: '#FF3B3B', textDecoration: 'line-through', opacity: 0.6, marginBottom: '2rem', fontWeight: 700 }}>₹2,094</div>
+            <div style={{ fontSize: '2rem', fontFamily: "'Inter', sans-serif", color: '#FF3B3B', textDecoration: 'line-through', opacity: 0.6, marginBottom: '2rem', fontWeight: 700 }}>₹{BUNDLE_VALUE.toLocaleString('en-IN')}</div>
 
             <div style={{ fontSize: '1rem', color: '#F5C842', fontWeight: 600, marginBottom: '0.5rem' }}>You get everything for:</div>
-            <div style={{ fontSize: '3.5rem', fontFamily: "'Inter', sans-serif", color: '#F5C842', lineHeight: 1, fontWeight: 700 }}>₹399</div>
-            <div style={{ fontSize: '0.9rem', color: '#00E87A', fontWeight: 600, marginTop: '8px', opacity: 0.8, fontFamily: "'Inter', sans-serif" }}>(You Save: ₹1,695)</div>
+            <div style={{ fontSize: '3.5rem', fontFamily: "'Inter', sans-serif", color: '#F5C842', lineHeight: 1, fontWeight: 700 }}>₹{PRICE}</div>
+            <div style={{ fontSize: '0.9rem', color: '#00E87A', fontWeight: 600, marginTop: '8px', opacity: 0.8, fontFamily: "'Inter', sans-serif" }}>(You Save: ₹{(BUNDLE_VALUE - PRICE).toLocaleString('en-IN')})</div>
           </div>
         </div>
       </section>
@@ -859,38 +821,28 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
         <div className="l-wrap">
           <div className="l-pricing" style={{ marginTop: '0' }}>
             {/* Pricing display */}
-            <div style={{ fontSize: '1.4rem', color: '#6B6860', textDecoration: 'line-through', marginBottom: '2px', fontWeight: 600, fontFamily: "'Inter', sans-serif" }}>₹599</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: '14px', flexWrap: 'wrap' }}>
+              <div style={{ fontFamily: "'Inter', sans-serif", fontSize: '1.8rem', color: '#6B6860', textDecoration: 'line-through', fontWeight: 700 }}>₹{PREVIOUS_PRICE}</div>
+              <div style={{ fontFamily: "'Inter', sans-serif", fontSize: '3.5rem', color: '#F5C842', lineHeight: 1, fontWeight: 700 }}>₹{PRICE}</div>
+            </div>
+            <div style={{ fontSize: '0.9rem', color: '#00E87A', fontWeight: 600, marginTop: '8px', fontFamily: "'Inter', sans-serif" }}>
+              Launch price — you save ₹{PREVIOUS_PRICE - PRICE}
+            </div>
 
-            {couponApplied ? (
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                  <div style={{ fontFamily: "'Inter', sans-serif", fontSize: '2rem', color: '#6B6860', textDecoration: 'line-through', fontWeight: 700 }}>₹{ORIGINAL_PRICE}</div>
-                  <div style={{ fontFamily: "'Inter', sans-serif", fontSize: '3rem', color: '#00E87A', lineHeight: 1, fontWeight: 700 }}>₹{finalPrice}</div>
-                </div>
-                <div style={{ fontSize: '0.9rem', color: '#00E87A', fontWeight: 600, marginTop: '6px', fontFamily: "'Inter', sans-serif" }}>
-                  🎉 {couponApplied.discount_percent}% off via <strong>{couponApplied.influencer_name}</strong> — You save ₹{ORIGINAL_PRICE - finalPrice}
-                </div>
-              </div>
-            ) : (
-              <div style={{ fontFamily: "'Inter', sans-serif", fontSize: '3rem', color: '#F5C842', marginBottom: '4px', fontWeight: 700 }}>₹{ORIGINAL_PRICE}</div>
-            )}
-
-            <div style={{ fontSize: '0.78rem', color: '#6B6860', marginBottom: '1.25rem', marginTop: '4px' }}>Instant access • No subscription • Start today</div>
-
-            {/* Coupon input moved to CheckoutModal */}
+            <div style={{ fontSize: '0.78rem', color: '#6B6860', marginBottom: '1.25rem', marginTop: '10px' }}>Instant access • No subscription • Start today</div>
 
             <button className="l-cta" style={{ margin: '0 auto' }} onClick={isEnrolled ? onReturnToCourse : handleStartCheckout}>
               {isEnrolled ? 'Return to Course' : `Yes, I Want My Focus Back`}
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }} aria-hidden="true">
                 <path d="M5 12h14M12 5l7 7-7 7" />
               </svg>
             </button>
-            
+
             <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '0.85rem', color: 'rgba(237,232,220,0.85)', fontWeight: 400 }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00E87A" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00E87A" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <polyline points="20 6 9 17 4 12"></polyline>
               </svg>
-              7-Day Money-Back Guarantee — No questions asked
+              7-Day Money-Back Guarantee
             </div>
 
             <div style={{ marginTop: '1.5rem', paddingTop: '1.25rem', borderTop: '1px solid #2C2C26' }}>
@@ -908,9 +860,9 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
             </div>
             <h3 style={{ color: '#F5C842', fontFamily: "'DM Serif Display', serif", fontSize: '1.4rem', marginBottom: '0.75rem' }}>7-Day Money-Back Guarantee</h3>
             <p style={{ color: 'rgba(237,232,220,0.8)', fontSize: '0.95rem', lineHeight: '1.6', margin: 0, fontWeight: 300 }}>
-              Finish the reset.<br />
-              If your focus doesn't improve — get 100% back.<br />
-              No questions. No friction.
+              Do the 7 days.<br />
+              If your focus hasn&apos;t improved, email us within 7 days of finishing<br />
+              and you get 100% back. No friction, no interrogation.
             </p>
           </div>
         </div>
@@ -1079,20 +1031,16 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
       </footer>
       {/* Checkout Modal */}
       {showCheckoutModal && (
-        <CheckoutModal 
+        <CheckoutModal
           onClose={() => setShowCheckoutModal(false)}
           onProceed={handlePayment}
-          originalPrice={ORIGINAL_PRICE}
-          finalPrice={finalPrice}
-          couponCode={couponCode}
-          setCouponCode={setCouponCode}
-          couponApplied={couponApplied}
-          setCouponApplied={setCouponApplied}
-          couponLoading={couponLoading}
-          couponError={couponError}
-          applyCoupon={applyCoupon}
+          previousPrice={PREVIOUS_PRICE}
+          price={PRICE}
+          busy={checkoutBusy}
         />
       )}
+
+      <Toast message={toast?.message} tone={toast?.tone} onDismiss={dismissToast} />
 
     </div>
   );

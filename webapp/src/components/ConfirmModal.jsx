@@ -1,41 +1,49 @@
-import React, { useEffect } from 'react';
+import React from 'react';
+import useModalA11y from '../hooks/useModalA11y';
 
 export default function ConfirmModal({ onClose, onConfirm, title, message, confirmText = "Confirm" }) {
-  // Prevent scrolling on the body when modal is open
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, []);
+  const dialogRef = useModalA11y(onClose);
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0, left: 0, right: 0, bottom: 0,
-      backgroundColor: 'rgba(14, 14, 11, 0.85)',
-      backdropFilter: 'blur(8px)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 99999, // Ensure it's above ProfileModal if layered
-      padding: '20px',
-      animation: 'fadeIn 0.2s ease-out'
-    }}>
-      <div style={{
-        background: '#1C1C18',
-        border: '1px solid #2C2C26',
-        borderRadius: '12px',
-        width: '100%',
-        maxWidth: '420px',
-        padding: '32px 24px',
-        position: 'relative',
-        boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
-        animation: 'slideIn 0.3s cubic-bezier(0.2, 0, 0.2, 1)'
-      }}>
+    <div
+      style={{
+        position: 'fixed',
+        top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: 'rgba(14, 14, 11, 0.85)',
+        backdropFilter: 'blur(8px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 99999, // Ensure it's above ProfileModal if layered
+        padding: '20px',
+        animation: 'fadeIn 0.2s ease-out'
+      }}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        ref={dialogRef}
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="confirm-title"
+        aria-describedby="confirm-message"
+        tabIndex={-1}
+        style={{
+          background: '#1C1C18',
+          border: '1px solid #2C2C26',
+          borderRadius: '12px',
+          width: '100%',
+          maxWidth: '420px',
+          padding: '32px 24px',
+          position: 'relative',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+          animation: 'slideIn 0.3s cubic-bezier(0.2, 0, 0.2, 1)',
+          outline: 'none'
+        }}
+      >
         {/* Close Button */}
-        <button 
+        <button
           onClick={onClose}
+          aria-label="Cancel"
           style={{
             position: 'absolute', top: '16px', right: '16px',
             background: 'none', border: 'none', color: '#6B6860',
@@ -45,7 +53,7 @@ export default function ConfirmModal({ onClose, onConfirm, title, message, confi
           onMouseEnter={(e) => e.currentTarget.style.color = '#EDE8DC'}
           onMouseLeave={(e) => e.currentTarget.style.color = '#6B6860'}
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
           </svg>
@@ -69,19 +77,19 @@ export default function ConfirmModal({ onClose, onConfirm, title, message, confi
           </svg>
         </div>
 
-        <h2 style={{ 
-          fontSize: '1.4rem', 
-          fontFamily: 'var(--font-display)', 
-          color: '#EDE8DC', 
+        <h2 id="confirm-title" style={{
+          fontSize: '1.4rem',
+          fontFamily: 'var(--font-display)',
+          color: '#EDE8DC',
           margin: '0 0 12px 0',
           letterSpacing: '-0.01em'
         }}>
           {title}
         </h2>
-        
-        <p style={{ 
-          fontSize: '0.95rem', 
-          color: 'rgba(237,232,220,0.8)', 
+
+        <p id="confirm-message" style={{
+          fontSize: '0.95rem',
+          color: 'rgba(237,232,220,0.8)',
           lineHeight: '1.6',
           margin: '0 0 32px 0',
           fontWeight: '300'
