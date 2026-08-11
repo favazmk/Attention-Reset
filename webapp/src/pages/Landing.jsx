@@ -1,22 +1,25 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useLayoutEffect, useRef } from 'react';
 import PrivacyPolicy from '../components/PrivacyPolicy';
 import TermsAndConditions from '../components/TermsAndConditions';
 import CheckoutModal from '../components/CheckoutModal';
 import Toast from '../components/Toast';
 import { authedPost } from '../api';
+import '../styles/landing.css';
 
 const PRICE = 99;
 const PREVIOUS_PRICE = 399;
 const BUNDLE_VALUE = 2094;
 
+// `rgb` mirrors `color` as a triplet so the carousel can tint its active-card
+// glow through rgba(var(--day-rgb), a) without a runtime colour conversion.
 const DAYS = [
-  { n: '01', color: '#00E87A', title: 'The Digital Kill-Switch', action: 'Stop the pings. Start the progress.', feel: 'Lighter. Less reactive.' },
-  { n: '02', color: '#B060FF', title: 'The Snap Audit', action: 'Find your attention leaks in 5 minutes.', feel: 'Aware. In control of what you\'re fighting.' },
-  { n: '03', color: '#3BB8E8', title: 'The Monk Sprint', action: 'One task. Zero noise. 100% impact.', feel: 'Surprised by what you finished.' },
-  { n: '04', color: '#F5C842', title: 'The Focus Sprints', action: 'Level up your mental endurance.', feel: 'Your brain starts to feel like yours again.' },
-  { n: '05', color: '#00E5C0', title: 'The Fortress', action: 'Design a space where focus is the only option.', feel: 'Work feels 10× less exhausting.' },
-  { n: '06', color: '#FF3B3B', title: 'The Dopamine Reset', action: 'Recover your edge through strategic boredom.', feel: 'Calm you haven\'t felt in months.' },
-  { n: '07', color: '#FF8C00', title: 'The Attention OS', action: 'Build a system that works so you don\'t have to.', feel: 'You have a system. Not just intentions.' },
+  { n: '01', color: '#00E87A', rgb: '0,232,122', title: 'The Digital Kill-Switch', action: 'Stop the pings. Start the progress.', feel: 'Lighter. Less reactive.' },
+  { n: '02', color: '#B060FF', rgb: '176,96,255', title: 'The Snap Audit', action: 'Find your attention leaks in 5 minutes.', feel: 'Aware. In control of what you\'re fighting.' },
+  { n: '03', color: '#3BB8E8', rgb: '59,184,232', title: 'The Monk Sprint', action: 'One task. Zero noise. 100% impact.', feel: 'Surprised by what you finished.' },
+  { n: '04', color: '#F5C842', rgb: '245,200,66', title: 'The Focus Sprints', action: 'Level up your mental endurance.', feel: 'Your brain starts to feel like yours again.' },
+  { n: '05', color: '#00E5C0', rgb: '0,229,192', title: 'The Fortress', action: 'Design a space where focus is the only option.', feel: 'Work feels 10× less exhausting.' },
+  { n: '06', color: '#FF3B3B', rgb: '255,59,59', title: 'The Dopamine Reset', action: 'Recover your edge through strategic boredom.', feel: 'Calm you haven\'t felt in months.' },
+  { n: '07', color: '#FF8C00', rgb: '255,140,0', title: 'The Attention OS', action: 'Build a system that works so you don\'t have to.', feel: 'You have a system. Not just intentions.' },
 ];
 
 const FEATURES = [
@@ -79,6 +82,8 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
 
   const [touchStart, setTouchStart] = React.useState(null);
   const [touchOffset, setTouchOffset] = React.useState(0);
+
+  const rootRef = useRef(null);
 
   const handleTouchStart = (e) => {
     setTouchStart(e.targetTouches[0].clientX);
@@ -226,178 +231,61 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
     setCheckedSymptoms(prev => ({ ...prev, [i]: !prev[i] }));
   };
 
-  // Inject landing-specific styles
-  useEffect(() => {
-    const style = document.createElement('style');
-    style.id = 'landing-styles';
-    style.textContent = `
-      .l-section { padding: 5.5rem 0; border-top: 1px solid #2C2C26; }
-      .l-wrap { max-width: 1100px; margin: 0 auto; padding: 0 1.25rem; }
-      .l-label { font-size: 0.62rem; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: #F5C842; margin-bottom: 0.75rem; }
-      .l-h1 { font-family: 'DM Serif Display', serif; font-weight: 400; font-size: clamp(2.5rem, 7vw, 4.2rem); line-height: 1.05; letter-spacing: -0.02em; margin-bottom: 1.5rem; color: #EDE8DC; }
-      .l-h2 { font-family: 'DM Serif Display', serif; font-weight: 400; font-size: clamp(1.8rem, 5vw, 2.8rem); line-height: 1.1; margin-bottom: 1.25rem; color: #EDE8DC; }
-      .l-p { color: #EDE8DC; font-weight: 300; line-height: 1.75; max-width: 70ch; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
-      .l-rule { height: 1px; background: linear-gradient(90deg,#F5C842,transparent); margin: 1.5rem 0; opacity: 0.55; }
-      .l-cta { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; max-width: 380px; background: #F5C842; color: #0E0E0B; font-family: 'DM Sans',sans-serif; font-weight: 700; font-size: 1rem; letter-spacing: 1px; text-transform: uppercase; text-decoration: none; padding: 17px 36px; border-radius: 4px; border: none; cursor: pointer; text-align: center; transition: transform .2s, box-shadow .2s; }
-      .l-cta:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(245,200,66,.25); }
-      .l-checklist { list-style: none; display: flex; flex-direction: column; gap: 10px; margin: 1.5rem 0; }
-      .l-checklist li { display: flex; align-items: flex-start; gap: 14px; padding: 13px 15px; background: #1C1C18; border: 1px solid #2C2C26; border-radius: 6px; font-size: 0.93rem; font-weight: 300; color: rgba(237,232,220,.85); transition: border-color .2s; }
-      .l-checklist li:hover { border-color: rgba(245,200,66,.3); }
-      .l-cb { width: 17px; height: 17px; border: 2px solid #3a3a34; border-radius: 3px; flex-shrink: 0; margin-top: 2px; }
-      .l-card { background: #1C1C18; border: 1px solid #2C2C26; border-radius: 6px; padding: 1.5rem; position: relative; overflow: hidden; }
-      .l-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: #F5C842; box-shadow: 0 0 8px #F5C842; }
-      .l-day-row { display: flex; gap: 16px; padding: 16px 0; border-bottom: 1px solid #2C2C26; align-items: flex-start; }
-      .l-feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 1.25rem; }
-      .l-feature { background: #1C1C18; border: 1px solid #2C2C26; border-radius: 6px; padding: 1.25rem; font-size: 0.86rem; color: rgba(237,232,220,.78); font-weight: 300; }
-      .l-feature strong { display: block; color: #EDE8DC; font-weight: 600; margin-bottom: 3px; font-size: 0.875rem; }
-      .l-split { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 1.25rem; }
-      .l-split-col { border: 1px solid #2C2C26; border-radius: 6px; padding: 1.25rem; }
-      .l-split-col ul { list-style: none; display: flex; flex-direction: column; gap: 9px; }
-      .l-split-col li { font-size: 0.84rem; color: rgba(237,232,220,.72); display: flex; gap: 8px; font-weight: 300; }
-      .l-pricing { background: #1C1C18; border: 1px solid #2C2C26; border-radius: 8px; padding: 2rem; text-align: center; margin-top: 2rem; position: relative; overflow: hidden; }
-      .l-pricing::before { content:''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg,#FF3B3B,#F5C842,#FF8C00); box-shadow: 0 0 16px #F5C842; }
-      .l-offer-list { list-style: none; text-align: left; margin: 1.25rem 0; display: flex; flex-direction: column; gap: 10px; }
-      .l-offer-list li { display: flex; gap: 10px; align-items: flex-start; font-size: 0.9rem; font-weight: 300; color: rgba(237,232,220,.85); }
-      .l-offer-list li::before { content:'✓'; color:#F5C842; font-weight:700; flex-shrink:0; }
-      .l-faq-item { border-bottom: 1px solid #2C2C26; }
-      .l-faq-q { width: 100%; text-align: left; background: none; border: none; color: #EDE8DC; font-family: 'DM Sans',sans-serif; font-weight: 500; font-size: 0.95rem; padding: 1.2rem 0; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-      .l-faq-a { font-size: 0.88rem; color: rgba(237,232,220,.68); font-weight: 300; padding-bottom: 1.2rem; line-height: 1.7; }
-      .l-trust { display: flex; gap: 1.25rem; flex-wrap: wrap; margin-top: 1.25rem; }
-      .l-trust span { font-size: 0.8rem; color: #EDE8DC; display: flex; align-items: center; gap: 6px; text-shadow: 0 1px 3px rgba(0,0,0,0.8); font-weight: 500; }
-      .l-dot { width: 5px; height: 5px; border-radius: 50%; background: #F5C842; box-shadow: 0 0 5px #F5C842; flex-shrink: 0; }
-      .l-author { display: flex; gap: 1.25rem; align-items: flex-start; margin-top: 1.5rem; }
-      .l-avatar { width: 60px; height: 60px; border-radius: 50%; flex-shrink: 0; background: linear-gradient(135deg,#F5C842,#FF8C00); display: flex; align-items: center; justify-content: center; font-family: 'DM Serif Display',serif; font-size: 1.4rem; color: #0E0E0B; }
-      .l-bump { margin-top: 1rem; padding: 1rem; background: rgba(245,200,66,.06); border: 1px dashed rgba(245,200,66,.3); border-radius: 6px; font-size: 0.84rem; font-weight: 300; color: rgba(237,232,220,.8); }
-      .l-guarantee { border: 1px solid #2C2C26; border-radius: 8px; padding: 2rem; text-align: center; background: rgba(245,200,66,0.03); }
-      
-      /* Carousel Styles */
-      .l-carousel-viewport { 
-        position: relative; 
-        overflow: hidden; 
-        padding: 2rem 0;
-        margin: 0 -1.25rem; 
-        -webkit-mask-image: linear-gradient(to right, transparent, black 25%, black 75%, transparent);
-        mask-image: linear-gradient(to right, transparent, black 25%, black 75%, transparent);
-        --card-w: 280px;
-        --card-m: 10px;
-      }
-      .l-carousel-track { 
-        display: flex; 
-        transition: transform 0.6s cubic-bezier(0.2, 0, 0.2, 1); 
-        padding: 0 50%;
-        width: max-content;
-      }
-      .l-carousel-card { 
-        flex: 0 0 var(--card-w); 
-        padding: 1.5rem; 
-        background: #1C1C18; 
-        border: 1px solid #2C2C26; 
-        border-radius: 12px; 
-        margin: 0 var(--card-m); 
-        transition: all 0.5s cubic-bezier(0.2, 0, 0.2, 1);
-        cursor: pointer;
-        opacity: 0.4;
-        transform: scale(0.9);
-      }
-      .l-carousel-card.active { 
-        opacity: 1; 
-        transform: scale(1); 
-        border-color: rgba(245,200,66,0.4); 
-        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-      }
-      .l-carousel-nav {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 20px;
-        margin-top: 2rem;
-      }
-      .l-carousel-btn {
-        background: none;
-        border: 1px solid #2C2C26;
-        color: #EDE8DC;
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: all 0.2s;
-      }
-      .l-carousel-btn:hover:not(:disabled) {
-        border-color: #F5C842;
-        color: #F5C842;
-      }
-      .l-carousel-btn:disabled {
-        opacity: 0.2;
-        cursor: not-allowed;
-      }
-      .l-carousel-dots {
-        display: flex;
-        gap: 8px;
-      }
-      .l-carousel-dot {
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: #2C2C26;
-        cursor: pointer;
-        transition: all 0.3s;
-      }
-      .l-carousel-dot.active {
-        background: #F5C842;
-        transform: scale(1.5);
-      }
-      .l-hero-container { position: relative; overflow: hidden; width: 100%; }
-      .l-video-bg { 
-        position: absolute; 
-        inset: 0;
-        width: 100%; 
-        height: 100%; 
-        object-fit: cover; 
-        z-index: 0; 
-        display: block;
-      }
-      .l-hero-content { position: relative; z-index: 2; width: 100%; }
-      .l-hero-fade {
-        position: absolute;
-        bottom: -1px;
-        left: 0;
-        right: 0;
-        height: 252px;
-        background: linear-gradient(to bottom, transparent, #0E0E0B);
-        z-index: 1;
-        pointer-events: none;
-      }
-      .l-header { position: sticky; top: 0; z-index: 100; background: rgba(14, 14, 11, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid rgba(44, 44, 38, 0.5); padding: 1rem 0; }
-      .l-header-inner { display: flex; justify-content: space-between; align-items: center; }
-      .l-header-nav { display: flex; gap: 24px; align-items: center; }
-      .l-header-link { color: rgba(237, 232, 220, 0.8); text-decoration: none; font-size: 0.85rem; font-weight: 500; transition: color 0.2s; }
-      .l-header-link:hover { color: #F5C842; }
-      @media (max-width:960px) {
-        .l-feature-grid { grid-template-columns: 1fr 1fr; }
-      }
-      .l-mobile-menu-btn { display: none; }
-      .l-desktop-auth { display: flex; }
-      .l-mobile-nav { display: none; }
-      @media (max-width:820px) {
-        .l-header-nav { display: none; }
-        .l-desktop-auth { display: none; }
-        .l-mobile-menu-btn { display: flex !important; }
-        .l-mobile-nav { display: flex; flex-direction: column; background: #0E0E0B; padding: 1rem 1.25rem; border-top: 1px solid #2C2C26; position: absolute; top: 100%; left: 0; right: 0; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
-        .l-mobile-nav a { color: #EDE8DC; text-decoration: none; padding: 16px 0; font-size: 1rem; border-bottom: 1px solid rgba(44,44,38,0.5); font-weight: 400; }
-        .l-mobile-nav a:last-of-type { border-bottom: none; }
-      }
-      @media (max-width:640px) { 
-        .l-split, .l-feature-grid { grid-template-columns: 1fr; } 
-        .l-h1 { font-size: 2.2rem; }
-        .l-carousel-viewport { --card-w: 260px; }
-      }
-    `;
-    document.head.appendChild(style);
-    return () => { const s = document.getElementById('landing-styles'); if (s) s.remove(); };
+  // Reveal-on-scroll. Sections marked `.l-reveal` settle into place as they
+  // enter the viewport, so the page arrives in layers instead of all at once.
+  //
+  // The hidden start state lives behind [data-reveal="on"], set here rather
+  // than in the markup: every section is a reveal target, so if this effect
+  // never ran the page would render blank. Opting in from JS makes "visible"
+  // the failure mode. useLayoutEffect (not useEffect) applies it before the
+  // first paint, so nothing flashes in and back out.
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    if (!root) return undefined;
+
+    const targets = root.querySelectorAll('.l-reveal');
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!targets.length || reduced || typeof IntersectionObserver === 'undefined') {
+      return undefined;
+    }
+
+    root.dataset.reveal = 'on';
+
+    let delivered = false;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        delivered = true;
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-in');
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { rootMargin: '0px 0px -12% 0px', threshold: 0.05 }
+    );
+
+    targets.forEach((el) => observer.observe(el));
+
+    // Backstop for contexts that create an observer but never deliver to it —
+    // a page not compositing frames skips the rendering-lifecycle step that
+    // both dispatches these callbacks and advances CSS transitions. Marking the
+    // targets `is-in` would not help there (the fade would never run), so the
+    // recovery is to switch the whole reveal system off and let the content
+    // paint at its natural state. A working observer delivers its first batch
+    // almost immediately, so this only ever fires when nothing arrived at all.
+    const failsafe = setTimeout(() => {
+      if (delivered) return;
+      observer.disconnect();
+      delete root.dataset.reveal;
+    }, 2000);
+
+    return () => {
+      clearTimeout(failsafe);
+      observer.disconnect();
+    };
   }, []);
+
 
   if (showPrivacy) {
     return <PrivacyPolicy onBack={() => { setShowPrivacy(false); window.scrollTo(0, 0); }} />;
@@ -408,13 +296,26 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
   }
 
   return (
-    <div style={{ background: '#0E0E0B', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif", color: '#EDE8DC' }}>
+    <div className="landing" ref={rootRef}>
+
+      {/* Ambient background field. Fixed behind everything so scrolling content
+          crosses lit and unlit regions instead of one uniform black slab. */}
+      <div className="l-atmosphere" aria-hidden="true">
+        <div className="l-atm-grid" />
+        <div className="l-atm-glow l-atm-glow--key" />
+        <div className="l-atm-glow l-atm-glow--fill" />
+        <div className="l-atm-glow l-atm-glow--bloom" />
+        <div className="l-atm-vignette" />
+      </div>
+
+      <div className="l-content">
 
       {/* HEADER */}
       <header className="l-header">
         <div className="l-wrap l-header-inner">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '1.25rem', fontFamily: "'DM Serif Display', serif", color: '#EDE8DC', letterSpacing: '0.5px' }}>Deeper Fix</span>
+          <div className="l-brand">
+            <span className="l-brand-mark" aria-hidden="true" />
+            <span>Deeper Fix</span>
           </div>
           <nav className="l-header-nav">
             <a href="#symptoms" className="l-header-link">Symptoms</a>
@@ -425,27 +326,13 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
           </nav>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
             <button
+              className="l-btn-nav"
               onClick={isEnrolled ? onReturnToCourse : handleStartCheckout}
               style={{
                 opacity: showSticky ? 1 : 0,
                 pointerEvents: showSticky ? 'auto' : 'none',
                 transform: `translateX(${showSticky ? '0' : '10px'})`,
                 transition: 'all 0.4s cubic-bezier(0.22, 1, 0.36, 1)',
-                background: 'linear-gradient(135deg, #F5C842, #FF8C00)',
-                color: '#0E0E0B',
-                border: 'none',
-                padding: '8px 16px',
-                borderRadius: '4px',
-                fontSize: '0.8rem',
-                fontWeight: 700,
-                letterSpacing: '1px',
-                textTransform: 'uppercase',
-                cursor: 'pointer',
-                fontFamily: "'DM Sans', sans-serif",
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                boxShadow: '0 4px 12px rgba(245,200,66,0.2)'
               }}
             >
               {isEnrolled ? 'Return to Course' : 'Start My Reset'}
@@ -467,25 +354,11 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
 
             <div className="l-desktop-auth">
               {!isLoggedIn ? (
-                <button 
-                  onClick={() => onStartReset('signin')}
-                  style={{
-                    background: 'transparent', border: '1px solid rgba(245,200,66,0.3)', color: '#F5C842',
-                    padding: '8px 16px', borderRadius: '4px', fontSize: '0.8rem', letterSpacing: '1px',
-                    textTransform: 'uppercase', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif"
-                  }}
-                >
+                <button className="l-btn-ghost" onClick={() => onStartReset('signin')}>
                   Course Login
                 </button>
               ) : (
-                <button 
-                  onClick={onOpenProfile} 
-                  style={{ 
-                    display: 'flex', alignItems: 'center', gap: '6px',
-                    color: 'rgba(237,232,220,0.8)', background: 'rgba(28,28,24,0.6)', border: '1px solid rgba(237,232,220,0.1)', cursor: 'pointer',
-                    fontSize: '0.75rem', letterSpacing: '1px', textTransform: 'uppercase', padding: '8px 16px', borderRadius: '4px'
-                  }}
-                >
+                <button className="l-btn-quiet" onClick={onOpenProfile}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                     <circle cx="12" cy="7" r="4"></circle>
@@ -550,6 +423,7 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
         >
           <source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260314_131748_f2ca2a28-fed7-44c8-b9a9-bd9acdd5ec31.mp4" type="video/mp4" />
         </video>
+        <div className="l-hero-scrim" />
         <div className="l-hero-fade" />
         <div className="l-wrap l-hero-content" style={{ padding: '8rem 1.25rem 6rem' }}>
           <p className="l-label">7-Day Interactive Programme</p>
@@ -580,34 +454,18 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
       </section>
 
       {/* SYMPTOM MIRROR */}
-      <section id="symptoms" className="l-section" style={{ borderTop: 'none' }}>
-        <div className="l-wrap">
+      <section id="symptoms" className="l-section l-section--alarm l-section--flush">
+        <div className="l-wrap l-reveal">
           <p className="l-label">Does this sound familiar?</p>
           <h2 className="l-h2">Signs your attention<br /><em>is being hijacked</em></h2>
           <p className="l-p">Check what sounds familiar:</p>
           <ul className="l-checklist">
-            {['You open your phone to do one thing and lose 30 minutes', 'You can\'t read 3 paragraphs without reaching for your phone', 'You start tasks but finish almost none of them', 'Your best ideas stay in your head because focus never arrives', 'You feel guilty scrolling but can\'t seem to stop', 'Deep work used to feel easy. Now it feels impossible.', 'Can\'t watch a 10 minute video without skipping.'].map((t, i) => {
-              const active = checkedSymptoms[i];
-              return (
-                <li
-                  key={i}
-                  onClick={() => toggleSymptom(i)}
-                  style={{
-                    cursor: 'pointer',
-                    borderColor: active ? 'rgba(255,59,59,0.4)' : '#2C2C26',
-                    backgroundColor: active ? 'rgba(255,59,59,0.05)' : '#1C1C18',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  <div className="l-cb" style={{
-                    backgroundColor: active ? '#FF3B3B' : 'transparent',
-                    borderColor: active ? '#FF3B3B' : '#3a3a34',
-                    boxShadow: active ? '0 0 10px rgba(255,59,59,0.4)' : 'none'
-                  }} />
-                  <span style={{ color: active ? '#FF3B3B' : 'rgba(237,232,220,.85)', transition: 'color 0.2s' }}>{t}</span>
-                </li>
-              );
-            })}
+            {['You open your phone to do one thing and lose 30 minutes', 'You can\'t read 3 paragraphs without reaching for your phone', 'You start tasks but finish almost none of them', 'Your best ideas stay in your head because focus never arrives', 'You feel guilty scrolling but can\'t seem to stop', 'Deep work used to feel easy. Now it feels impossible.', 'Can\'t watch a 10 minute video without skipping.'].map((t, i) => (
+              <li key={i} data-on={!!checkedSymptoms[i]} onClick={() => toggleSymptom(i)}>
+                <div className="l-cb" />
+                <span className="l-cb-text">{t}</span>
+              </li>
+            ))}
           </ul>
           <div className="l-card">
             <p style={{ fontSize: '1rem', lineHeight: 1.75, color: '#EDE8DC' }}>
@@ -619,8 +477,8 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
       </section>
 
       {/* MECHANISM */}
-      <section className="l-section">
-        <div className="l-wrap">
+      <section className="l-section l-section--warm">
+        <div className="l-wrap l-reveal">
           <p className="l-label">The real problem</p>
           <h2 className="l-h2">The problem isn't you.<br /><em>It's the system.</em></h2>
           <div className="l-rule" />
@@ -649,8 +507,8 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
       </section>
 
       {/* 7-DAY LADDER */}
-      <section id="programme" className="l-section">
-        <div className="l-wrap">
+      <section id="programme" className="l-section l-section--focus">
+        <div className="l-wrap l-reveal">
           <p className="l-label">The programme</p>
           <h2 className="l-h2">Here's what changes —<br /><em>day by day.</em></h2>
           <p className="l-p" style={{ marginBottom: '2rem' }}>Each day features specific exercises and visible outcomes.</p>
@@ -672,6 +530,7 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
                 <div
                   key={d.n}
                   className={`l-carousel-card ${i === activeIndex ? 'active' : ''}`}
+                  style={{ '--day-rgb': d.rgb }}
                   onClick={() => setActiveIndex(i)}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
@@ -734,8 +593,8 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
 
 
       {/* INSIDE */}
-      <section id="inside" className="l-section">
-        <div className="l-wrap">
+      <section id="inside" className="l-section l-section--calm">
+        <div className="l-wrap l-reveal">
           <p className="l-label">Your Focus Toolkit</p>
           <h2 className="l-h2">Everything you get to<br /><em>take back control.</em></h2>
 
@@ -746,23 +605,11 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
 
           <div className="l-feature-grid">
             {FEATURES.map((f) => (
-              <div key={f.title} className="l-feature" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div key={f.title} className="l-feature">
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px', gap: '12px' }}>
-                    <strong style={{ margin: 0, fontSize: '0.95rem' }}>{f.title}</strong>
-                    <span style={{
-                      fontSize: '0.65rem',
-                      fontWeight: 700,
-                      color: '#F5C842',
-                      whiteSpace: 'nowrap',
-                      padding: '2px 6px',
-                      border: '1px solid rgba(245,200,66,0.3)',
-                      borderRadius: '4px',
-                      textTransform: 'uppercase',
-                      fontFamily: "'Inter', 'DM Sans', sans-serif"
-                    }}>
-                      {f.value}
-                    </span>
+                    <strong>{f.title}</strong>
+                    <span className="l-chip">{f.value}</span>
                   </div>
                   <div style={{ fontSize: '0.85rem', lineHeight: '1.6', color: 'rgba(237,232,220,0.65)', fontWeight: 300 }}>
                     {f.desc}
@@ -772,27 +619,20 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
             ))}
           </div>
 
-          <div style={{
-            marginTop: '3.5rem',
-            padding: '2.5rem',
-            background: 'rgba(245,200,66,0.03)',
-            border: '1px solid rgba(245,200,66,0.15)',
-            borderRadius: '12px',
-            textAlign: 'center'
-          }}>
+          <div className="l-value-total">
             <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: '#6B6860', marginBottom: '8px' }}>Total Bundle Value</div>
-            <div style={{ fontSize: '2rem', fontFamily: "'Inter', sans-serif", color: '#FF3B3B', textDecoration: 'line-through', opacity: 0.6, marginBottom: '2rem', fontWeight: 700 }}>₹{BUNDLE_VALUE.toLocaleString('en-IN')}</div>
+            <div className="l-num" style={{ fontSize: '2rem', color: '#FF3B3B', textDecoration: 'line-through', opacity: 0.6, marginBottom: '2rem' }}>₹{BUNDLE_VALUE.toLocaleString('en-IN')}</div>
 
             <div style={{ fontSize: '1rem', color: '#F5C842', fontWeight: 600, marginBottom: '0.5rem' }}>You get everything for:</div>
-            <div style={{ fontSize: '3.5rem', fontFamily: "'Inter', sans-serif", color: '#F5C842', lineHeight: 1, fontWeight: 700 }}>₹{PRICE}</div>
-            <div style={{ fontSize: '0.9rem', color: '#00E87A', fontWeight: 600, marginTop: '8px', opacity: 0.8, fontFamily: "'Inter', sans-serif" }}>(You Save: ₹{(BUNDLE_VALUE - PRICE).toLocaleString('en-IN')})</div>
+            <div className="l-num" style={{ fontSize: '3.5rem', color: '#F5C842', lineHeight: 1 }}>₹{PRICE}</div>
+            <div className="l-num" style={{ fontSize: '0.9rem', color: '#00E87A', marginTop: '8px', opacity: 0.8 }}>(You Save: ₹{(BUNDLE_VALUE - PRICE).toLocaleString('en-IN')})</div>
           </div>
         </div>
       </section>
 
       {/* FOR / NOT FOR */}
       <section className="l-section">
-        <div className="l-wrap">
+        <div className="l-wrap l-reveal">
           <p className="l-label">Be honest with yourself</p>
           <h2 className="l-h2">Who this is for —<br /><em>and who it isn't.</em></h2>
           <div className="l-split">
@@ -817,15 +657,15 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
       </section>
 
       {/* PRICING */}
-      <section className="l-section" id="pricing">
-        <div className="l-wrap">
+      <section className="l-section l-section--money" id="pricing">
+        <div className="l-wrap l-reveal">
           <div className="l-pricing" style={{ marginTop: '0' }}>
             {/* Pricing display */}
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: '14px', flexWrap: 'wrap' }}>
-              <div style={{ fontFamily: "'Inter', sans-serif", fontSize: '1.8rem', color: '#6B6860', textDecoration: 'line-through', fontWeight: 700 }}>₹{PREVIOUS_PRICE}</div>
-              <div style={{ fontFamily: "'Inter', sans-serif", fontSize: '3.5rem', color: '#F5C842', lineHeight: 1, fontWeight: 700 }}>₹{PRICE}</div>
+              <div className="l-num" style={{ fontSize: '1.8rem', color: '#6B6860', textDecoration: 'line-through' }}>₹{PREVIOUS_PRICE}</div>
+              <div className="l-num" style={{ fontSize: '3.5rem', color: '#F5C842', lineHeight: 1 }}>₹{PRICE}</div>
             </div>
-            <div style={{ fontSize: '0.9rem', color: '#00E87A', fontWeight: 600, marginTop: '8px', fontFamily: "'Inter', sans-serif" }}>
+            <div className="l-num" style={{ fontSize: '0.9rem', color: '#00E87A', marginTop: '8px' }}>
               Launch price — you save ₹{PREVIOUS_PRICE - PRICE}
             </div>
 
@@ -867,23 +707,15 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
           </div>
         </div>
         {/* THE CHOICE */}
-        <section className="l-section" style={{ background: '#0E0E0B', borderTop: '1px solid #2C2C26' }}>
-          <div className="l-wrap" style={{ textAlign: 'center', maxWidth: '600px' }}>
+        <section className="l-section l-section--alarm">
+          <div className="l-wrap l-reveal" style={{ textAlign: 'center', maxWidth: '600px' }}>
             <p className="l-label" style={{ color: '#F5C842' }}>DECISION TIME</p>
             <h2 id="c0" className="l-h2" style={{ marginBottom: '3rem' }}>The Choice Is Yours</h2>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', alignItems: 'center' }}>
 
               {/* Option A */}
-              <div id="c1" style={{
-                background: 'rgba(255, 59, 59, 0.03)',
-                border: '1px solid rgba(255, 59, 59, 0.15)',
-                padding: '2.5rem',
-                borderRadius: '12px',
-                textAlign: 'left',
-                width: '100%',
-                boxSizing: 'border-box'
-              }}>
+              <div id="c1" className="l-choice l-choice--bad">
                 <h3 style={{ color: '#FF3B3B', fontFamily: "'DM Serif Display', serif", fontSize: '1.5rem', marginBottom: '1.25rem' }}>Option A — Leave This Page</h3>
                 <p style={{ color: '#888', fontSize: '1rem', lineHeight: '1.6', margin: 0 }}>
                   Leave now, keep losing hours every day, and stay stuck in the same cycle.
@@ -903,21 +735,13 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
               </p>
 
               {/* Option B */}
-              <div id="c2" style={{
-                background: 'rgba(0, 232, 122, 0.03)',
-                border: '2px solid rgba(0, 232, 122, 0.4)',
-                padding: '2.5rem',
-                borderRadius: '12px',
-                textAlign: 'left',
-                width: '100%',
-                boxSizing: 'border-box'
-              }}>
+              <div id="c2" className="l-choice l-choice--good">
                 <h3 style={{ color: '#00E87A', fontFamily: "'DM Serif Display', serif", fontSize: '1.5rem', marginBottom: '1.25rem' }}>Option B — Invest in Your Focus</h3>
                 <p style={{ color: '#EDE8DC', fontSize: '1.1rem', lineHeight: '1.6', marginBottom: '2rem' }}>
                   Invest now and take your attention back permanently—and move your life forward.
                 </p>
 
-                <button id="c4" className="l-cta" style={{ margin: '0 auto', background: '#00E87A', boxShadow: '0 8px 16px rgba(0, 232, 122, 0.2)', width: 'fit-content', padding: '16px 48px' }} onClick={isEnrolled ? onReturnToCourse : handleStartCheckout}>
+                <button id="c4" className="l-cta l-cta--go" style={{ margin: '0 auto' }} onClick={isEnrolled ? onReturnToCourse : handleStartCheckout}>
                   {isEnrolled ? 'Return to Course' : 'Start My 7-Day Reset'}
                   <svg
                     width="18" height="18" viewBox="0 0 24 24"
@@ -959,7 +783,7 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
 
       {/* FAQ */}
       <section id="faq" className="l-section">
-        <div className="l-wrap">
+        <div className="l-wrap l-reveal">
           <p className="l-label">Common questions</p>
           <h2 className="l-h2">Before you decide</h2>
           <div style={{ marginTop: '1.5rem' }}>
@@ -977,9 +801,8 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
       </section>
 
       {/* FINAL CTA */}
-      <section style={{ padding: '8rem 0', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: '400px', height: '400px', background: 'radial-gradient(circle,rgba(245,200,66,0.08) 0%,transparent 70%)', pointerEvents: 'none' }} />
-        <div className="l-wrap" style={{ position: 'relative' }}>
+      <section className="l-section l-section--warm" style={{ textAlign: 'center' }}>
+        <div className="l-wrap l-reveal" style={{ position: 'relative' }}>
           <p className="l-label" style={{ textAlign: 'center' }}>7 days. That's all it takes to take control back.</p>
           <h1 className="l-h1" style={{ fontSize: 'clamp(2rem,5vw,2.8rem)', textAlign: 'center' }}>Your attention is <em>still there.</em><br />You just need to reclaim it.</h1>
           <p className="l-p" style={{ maxWidth: '420px', margin: '1.25rem auto 2.5rem', fontSize: '1rem', textAlign: 'center' }}>One programme. Proven protocols. One system that lasts.</p>
@@ -999,11 +822,12 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
       </section>
 
       {/* Footer */}
-      <footer style={{ borderTop: '1px solid #2C2C26', padding: '4rem 1.25rem', textAlign: 'center', background: '#0A0A08' }}>
+      <footer className="l-footer">
         <div className="l-wrap" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem' }}>
-          
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '1.2rem', fontFamily: "'DM Serif Display', serif", color: '#EDE8DC', letterSpacing: '0.5px' }}>© Deeper Fix</span>
+
+          <div className="l-brand">
+            <span className="l-brand-mark" aria-hidden="true" />
+            <span>Deeper Fix</span>
           </div>
 
           <div style={{ fontSize: '0.85rem', color: '#6B6860', display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
@@ -1029,6 +853,9 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
           <p style={{ fontSize: '0.72rem', color: '#4A4840', marginTop: '1rem' }}>© {new Date().getFullYear()} Deeper Fix. All rights reserved.</p>
         </div>
       </footer>
+
+      </div>{/* /l-content */}
+
       {/* Checkout Modal */}
       {showCheckoutModal && (
         <CheckoutModal
