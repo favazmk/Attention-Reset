@@ -3,6 +3,17 @@ import PrivacyPolicy from '../components/PrivacyPolicy';
 import TermsAndConditions from '../components/TermsAndConditions';
 import CheckoutModal from '../components/CheckoutModal';
 import Toast from '../components/Toast';
+import JourneyRail from '../components/landing/JourneyRail';
+import StatBand from '../components/landing/StatBand';
+import AttentionLoop from '../components/landing/AttentionLoop';
+import {
+  Laptop,
+  Phone,
+  Tablet,
+  ScreenDayOne,
+  ScreenDayTwo,
+  ScreenDaySeven,
+} from '../components/landing/ProductScreens';
 import { authedPost } from '../api';
 import '../styles/landing.css';
 
@@ -10,8 +21,8 @@ const PRICE = 99;
 const PREVIOUS_PRICE = 399;
 const BUNDLE_VALUE = 2094;
 
-// `rgb` mirrors `color` as a triplet so the carousel can tint its active-card
-// glow through rgba(var(--day-rgb), a) without a runtime colour conversion.
+// `rgb` mirrors `color` as a triplet so the journey rail can tint its active
+// row through rgba(var(--day-rgb), a) without a runtime colour conversion.
 const DAYS = [
   { n: '01', color: '#00E87A', rgb: '0,232,122', title: 'The Digital Kill-Switch', action: 'Stop the pings. Start the progress.', feel: 'Lighter. Less reactive.' },
   { n: '02', color: '#B060FF', rgb: '176,96,255', title: 'The Snap Audit', action: 'Find your attention leaks in 5 minutes.', feel: 'Aware. In control of what you\'re fighting.' },
@@ -22,37 +33,59 @@ const DAYS = [
   { n: '07', color: '#FF8C00', rgb: '255,140,0', title: 'The Attention OS', action: 'Build a system that works so you don\'t have to.', feel: 'You have a system. Not just intentions.' },
 ];
 
+const SYMPTOMS = [
+  'You open your phone to do one thing and lose 30 minutes',
+  'You can\'t read 3 paragraphs without reaching for your phone',
+  'You start tasks but finish almost none of them',
+  'Your best ideas stay in your head because focus never arrives',
+  'You feel guilty scrolling but can\'t seem to stop',
+  'Deep work used to feel easy. Now it feels impossible.',
+  'Can\'t watch a 10 minute video without skipping.',
+];
+
+// The "before" column is the symptom list the reader has already ticked; the
+// "after" column is the programme's own day-by-day outcomes, each tagged with
+// the day that produces it. Nothing here is a new claim.
+const BEFORE = [SYMPTOMS[0], SYMPTOMS[2], SYMPTOMS[1], SYMPTOMS[5], SYMPTOMS[4]];
+const AFTER_DAYS = ['01', '02', '03', '05', '07'];
+
+const STATS = [
+  { value: 7, label: 'Days', note: 'One reset, start to finish' },
+  { value: '10–20', label: 'Minutes a day', note: 'Day 1 takes 10 minutes' },
+  { value: 41, label: 'Interactive tasks', note: 'Not theory — real action' },
+];
+
 const FEATURES = [
   {
-    title: "7-Day Protocols",
-    value: "₹599 value",
-    desc: "Science-backed daily missions designed to rebuild your focus step by step."
+    title: '7-Day Protocols',
+    value: '₹599 value',
+    desc: 'Science-backed daily missions designed to rebuild your focus step by step.',
   },
   {
-    title: "27 Clickable Checklists",
-    value: "₹499 value",
-    desc: "Action-based tasks you complete in real time — not just read."
+    title: '27 Clickable Checklists',
+    value: '₹499 value',
+    desc: 'Action-based tasks you complete in real time — not just read.',
   },
   {
-    title: "1 Attention OS Builder",
-    value: "₹99 value",
-    desc: "Your permanent post-reset system to protect your focus long-term."
+    title: '1 Attention OS Builder',
+    value: '₹99 value',
+    desc: 'Your permanent post-reset system to protect your focus long-term.',
   },
   {
-    title: "1 Before vs. After Score",
-    value: "₹199 value",
-    desc: "See exactly how far you've come — in numbers."
+    title: '1 Before vs. After Score',
+    value: '₹199 value',
+    desc: 'See exactly how far you\'ve come — in numbers.',
   },
   {
-    title: "3-Step Focus Ritual Builder",
-    value: "₹299 value",
-    desc: "A repeatable ritual that trains your brain to enter deep work on command."
+    title: '3-Step Focus Ritual Builder',
+    value: '₹299 value',
+    desc: 'A repeatable ritual that trains your brain to enter deep work on command.',
   },
   {
-    title: "11 Focus Blueprint & Audit insights",
-    value: "₹399 value",
-    desc: "A clear breakdown of your distractions, patterns, and reclaimed time."
-  }
+    title: '11 Focus Blueprint & Audit insights',
+    value: '₹399 value',
+    desc: 'A clear breakdown of your distractions, patterns, and reclaimed time.',
+  },
 ];
 
 const FAQS = [
@@ -64,10 +97,21 @@ const FAQS = [
   ['Why will this work when other things didn’t?', 'Because this isn’t information. It’s structured action.'],
 ];
 
+const ARROW = (
+  <svg
+    width="18" height="18" viewBox="0 0 24 24"
+    fill="none" stroke="currentColor" strokeWidth="2.2"
+    strokeLinecap="round" strokeLinejoin="round"
+    style={{ flexShrink: 0 }}
+    aria-hidden="true"
+  >
+    <path d="M5 12h14M12 5l7 7-7 7" />
+  </svg>
+);
+
 export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, isEnrolled, onReturnToCourse, onOpenProfile }) {
   const [openFaq, setOpenFaq] = React.useState(null);
   const [checkedSymptoms, setCheckedSymptoms] = React.useState({});
-  const [activeIndex, setActiveIndex] = React.useState(0);
   const [showPrivacy, setShowPrivacy] = React.useState(false);
   const [showTerms, setShowTerms] = React.useState(false);
   const [showContact, setShowContact] = React.useState(false);
@@ -80,38 +124,16 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
 
   const dismissToast = React.useCallback(() => setToast(null), []);
 
-  const [touchStart, setTouchStart] = React.useState(null);
-  const [touchOffset, setTouchOffset] = React.useState(0);
-
   const rootRef = useRef(null);
 
-  const handleTouchStart = (e) => {
-    setTouchStart(e.targetTouches[0].clientX);
-  };
-
-  const handleTouchMove = (e) => {
-    if (touchStart === null) return;
-    const currentTouch = e.targetTouches[0].clientX;
-    const diff = currentTouch - touchStart;
-    setTouchOffset(diff);
-  };
-
-  const handleTouchEnd = () => {
-    if (touchOffset > 50 && activeIndex > 0) {
-      setActiveIndex(prev => prev - 1);
-    } else if (touchOffset < -50 && activeIndex < DAYS.length - 1) {
-      setActiveIndex(prev => prev + 1);
-    }
-    setTouchStart(null);
-    setTouchOffset(0);
-  };
+  const checkedCount = Object.values(checkedSymptoms).filter(Boolean).length;
 
   useEffect(() => {
     const handleScroll = () => {
-      // Show sticky CTA after hero section (roughly 600px)
+      // Show the sticky bar and the header CTA once the hero is behind us.
       setShowSticky(window.scrollY > 700);
     };
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -138,6 +160,10 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
     if (window.fbq) window.fbq('track', 'InitiateCheckout', { value: PRICE, currency: 'INR' });
     setShowCheckoutModal(true);
   };
+
+  // Every CTA on the page funnels through here so enrolment state is handled in
+  // exactly one place.
+  const primaryAction = isEnrolled ? onReturnToCourse : handleStartCheckout;
 
   const handlePayment = async () => {
     if (checkoutBusy) return;
@@ -286,7 +312,6 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
     };
   }, []);
 
-
   if (showPrivacy) {
     return <PrivacyPolicy onBack={() => { setShowPrivacy(false); window.scrollTo(0, 0); }} />;
   }
@@ -310,7 +335,7 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
 
       <div className="l-content">
 
-      {/* HEADER */}
+      {/* ── HEADER ─────────────────────────────────────────────────────── */}
       <header className="l-header">
         <div className="l-wrap l-header-inner">
           <div className="l-brand">
@@ -320,14 +345,14 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
           <nav className="l-header-nav">
             <a href="#symptoms" className="l-header-link">Symptoms</a>
             <a href="#programme" className="l-header-link">The Programme</a>
-            <a href="#inside" className="l-header-link">What's Inside</a>
+            <a href="#inside" className="l-header-link">What&apos;s Inside</a>
             <a href="#pricing" className="l-header-link">Pricing</a>
             <a href="#faq" className="l-header-link">FAQ</a>
           </nav>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
             <button
               className="l-btn-nav"
-              onClick={isEnrolled ? onReturnToCourse : handleStartCheckout}
+              onClick={primaryAction}
               style={{
                 opacity: showSticky ? 1 : 0,
                 pointerEvents: showSticky ? 'auto' : 'none',
@@ -338,12 +363,14 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
               {isEnrolled ? 'Return to Course' : 'Start My Reset'}
             </button>
 
-            <button 
+            <button
               className="l-mobile-menu-btn"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
+              aria-expanded={isMenuOpen}
+              aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
               style={{ background: 'none', border: 'none', color: '#EDE8DC', cursor: 'pointer', padding: '4px', display: 'none', alignItems: 'center', justifyContent: 'center' }}
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 {isMenuOpen ? (
                   <path d="M18 6L6 18M6 6l12 12" />
                 ) : (
@@ -359,7 +386,7 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
                 </button>
               ) : (
                 <button className="l-btn-quiet" onClick={onOpenProfile}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                     <circle cx="12" cy="7" r="4"></circle>
                   </svg>
@@ -374,12 +401,12 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
           <div className="l-mobile-nav">
             <a href="#symptoms" onClick={() => setIsMenuOpen(false)}>Symptoms</a>
             <a href="#programme" onClick={() => setIsMenuOpen(false)}>The Programme</a>
-            <a href="#inside" onClick={() => setIsMenuOpen(false)}>What's Inside</a>
+            <a href="#inside" onClick={() => setIsMenuOpen(false)}>What&apos;s Inside</a>
             <a href="#pricing" onClick={() => setIsMenuOpen(false)}>Pricing</a>
             <a href="#faq" onClick={() => setIsMenuOpen(false)}>FAQ</a>
             <div style={{ margin: '16px 0', height: '1px', background: '#2C2C26' }} />
             {!isLoggedIn ? (
-              <button 
+              <button
                 onClick={() => { setIsMenuOpen(false); onStartReset('signin'); }}
                 style={{
                   background: 'rgba(245,200,66,0.1)', border: '1px solid rgba(245,200,66,0.3)', color: '#F5C842',
@@ -390,15 +417,15 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
                 Course Login
               </button>
             ) : (
-              <button 
-                onClick={() => { setIsMenuOpen(false); onOpenProfile(); }} 
-                style={{ 
+              <button
+                onClick={() => { setIsMenuOpen(false); onOpenProfile(); }}
+                style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                   color: 'rgba(237,232,220,0.8)', background: 'rgba(28,28,24,0.6)', border: '1px solid rgba(237,232,220,0.1)', cursor: 'pointer',
                   fontSize: '0.9rem', letterSpacing: '1px', textTransform: 'uppercase', padding: '12px 16px', borderRadius: '4px', width: '100%'
                 }}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                   <circle cx="12" cy="7" r="4"></circle>
                 </svg>
@@ -409,7 +436,10 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
         )}
       </header>
 
-      {/* HERO */}
+      {/* ── HERO ────────────────────────────────────────────────────────
+          Two columns: the promise on the left, the actual product on the
+          right. The video that used to carry this section alone is now the
+          light source behind it. */}
       <section className="l-hero-container">
         <video
           className="l-video-bg"
@@ -425,219 +455,279 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
         </video>
         <div className="l-hero-scrim" />
         <div className="l-hero-fade" />
-        <div className="l-wrap l-hero-content" style={{ padding: '8rem 1.25rem 6rem' }}>
-          <p className="l-label">7-Day Interactive Programme</p>
-          <h1 className="l-h1">Stop Blaming Yourself.<br />Your Attention Was Stolen.<br /><em>Let’s Take It Back.</em></h1>
-          <div className="l-rule" />
-          <p className="l-p" style={{ fontSize: '1.05rem', marginBottom: '2rem', maxWidth: '520px' }}>
-            The reset your brain has been waiting for—<br />
-            7 days to a mind that finally finishes what it starts.
-          </p>
-          <button className="l-cta" onClick={isEnrolled ? onReturnToCourse : handleStartCheckout}>
-            {isEnrolled ? 'Return to Course' : 'Start the Reset'}
-            <svg
-              width="18" height="18" viewBox="0 0 24 24"
-              fill="none" stroke="currentColor" strokeWidth="2.2"
-              strokeLinecap="round" strokeLinejoin="round"
-              style={{ flexShrink: 0 }}
-            >
-              <path d="M5 12h14M12 5l7 7-7 7" />
-            </svg>
-          </button>
-          <div className="l-trust">
-            <span><span className="l-dot" />interactive daily exercises</span>
-            <span><span className="l-dot" />10-20 min/Day</span>
-            <span><span className="l-dot" />Works on any device</span>
-          </div>
 
+        <div className="l-wrap l-hero-content">
+          <div className="l-hero-grid">
+
+            <div className="l-hero-copy">
+              <p className="l-label">7-Day Interactive Programme</p>
+              <h1 className="l-h1">Stop Blaming Yourself.<br />Your Attention Was Stolen.<br /><em>Let’s Take It Back.</em></h1>
+              <div className="l-rule" />
+              <p className="l-p" style={{ fontSize: '1.05rem', marginBottom: '2rem', maxWidth: '480px' }}>
+                The reset your brain has been waiting for — 7 days of guided,
+                interactive exercises that rebuild how you focus.
+              </p>
+              <button className="l-cta" onClick={primaryAction}>
+                {isEnrolled ? 'Return to Course' : 'Start the Reset'}
+                {ARROW}
+              </button>
+              <div className="l-trust">
+                <span><span className="l-dot" />41 interactive tasks</span>
+                <span><span className="l-dot" />10–20 min/day</span>
+                <span><span className="l-dot" />Works on any device</span>
+              </div>
+            </div>
+
+            {/* The product itself, not a stock photograph of one.
+                A laptop lid squeezed into a 330px column renders its own UI at
+                7px, so narrow viewports get the phone instead — same screen,
+                legible, and the frame someone on a phone recognises. */}
+            <div className="l-hero-device">
+              <div className="l-at-wide">
+                <Laptop className="l-float">
+                  <ScreenDayOne />
+                </Laptop>
+              </div>
+              <div className="l-at-narrow">
+                <Phone className="l-float l-phone-hero">
+                  <ScreenDayOne />
+                </Phone>
+              </div>
+              <p className="l-showcase-cap">Day 1, exactly as you’ll see it</p>
+            </div>
+
+          </div>
         </div>
       </section>
 
-      {/* SYMPTOM MIRROR */}
+      {/* ── SYMPTOM MIRROR + THE LOOP ───────────────────────────────────
+          The pain, made visible before it is described. */}
       <section id="symptoms" className="l-section l-section--alarm l-section--flush">
         <div className="l-wrap l-reveal">
           <p className="l-label">Does this sound familiar?</p>
           <h2 className="l-h2">Signs your attention<br /><em>is being hijacked</em></h2>
-          <p className="l-p">Check what sounds familiar:</p>
+
+          <AttentionLoop />
+
+          <p className="l-p" style={{ marginBottom: 0 }}>Check what sounds familiar:</p>
           <ul className="l-checklist">
-            {['You open your phone to do one thing and lose 30 minutes', 'You can\'t read 3 paragraphs without reaching for your phone', 'You start tasks but finish almost none of them', 'Your best ideas stay in your head because focus never arrives', 'You feel guilty scrolling but can\'t seem to stop', 'Deep work used to feel easy. Now it feels impossible.', 'Can\'t watch a 10 minute video without skipping.'].map((t, i) => (
-              <li key={i} data-on={!!checkedSymptoms[i]} onClick={() => toggleSymptom(i)}>
+            {SYMPTOMS.map((t, i) => (
+              <li
+                key={i}
+                data-on={!!checkedSymptoms[i]}
+                role="checkbox"
+                aria-checked={!!checkedSymptoms[i]}
+                tabIndex={0}
+                onClick={() => toggleSymptom(i)}
+                onKeyDown={(e) => {
+                  if (e.key === ' ' || e.key === 'Enter') {
+                    e.preventDefault();
+                    toggleSymptom(i);
+                  }
+                }}
+              >
                 <div className="l-cb" />
                 <span className="l-cb-text">{t}</span>
               </li>
             ))}
           </ul>
           <div className="l-card">
-            <p style={{ fontSize: '1rem', lineHeight: 1.75, color: '#EDE8DC' }}>
-              If you checked 3 or more — your attention hasn't broken. It's been <strong>trained this way.</strong><br /><br />
+            <p style={{ fontSize: '1rem', lineHeight: 1.75, color: '#EDE8DC', margin: 0 }}>
+              {checkedCount >= 3
+                ? <>You checked {checkedCount}. Your attention hasn&apos;t broken. It&apos;s been <strong>trained this way.</strong></>
+                : <>If you checked 3 or more — your attention hasn&apos;t broken. It&apos;s been <strong>trained this way.</strong></>}
+              <br /><br />
               And it can be retrained in 7 days.
             </p>
           </div>
         </div>
       </section>
 
-      {/* MECHANISM */}
+      {/* ── THE REALISATION ─────────────────────────────────────────────
+          Typography-led. No cards, no grid — this section is one thought. */}
       <section className="l-section l-section--warm">
-        <div className="l-wrap l-reveal">
+        <div className="l-wrap l-reveal" style={{ maxWidth: '820px' }}>
           <p className="l-label">The real problem</p>
-          <h2 className="l-h2">The problem isn't you.<br /><em>It's the system.</em></h2>
+          <h2 className="l-h2" style={{ fontSize: 'clamp(2.1rem, 6.5vw, 3.6rem)', marginBottom: 'var(--l-6)' }}>
+            The problem isn&apos;t you.<br /><em>It&apos;s the system.</em>
+          </h2>
           <div className="l-rule" />
-          <p className="l-p" style={{ marginBottom: '2rem', fontSize: '1.1rem' }}>
-            Algorithms are engineered to hijack your dopamine. Every notification triggers a cortisol spike. You interrupt yourself every 3 minutes—and need 23 minutes to refocus.
+          <p className="l-p" style={{ fontSize: '1.15rem', marginBottom: 'var(--l-6)' }}>
+            Algorithms are engineered to hijack your dopamine. Every notification
+            triggers a cortisol spike. You interrupt yourself every 3 minutes — and
+            need 23 minutes to refocus.
           </p>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            <div className="l-card" style={{ background: 'rgba(255,255,255,0.02)' }}>
-              <p style={{ fontSize: '1.1rem', color: '#EDE8DC', lineHeight: 1.6, margin: 0 }}>
-                This isn't another video course or PDF you forget.
-              </p>
-            </div>
-
-            <p className="l-p" style={{ fontSize: '1.1rem', fontWeight: 400 }}>
-              It's a <strong>7-day interactive reset</strong> — designed using proven science and psychology to change the system around you.
+          <p className="l-p" style={{ fontSize: '1.15rem', marginBottom: 'var(--l-6)' }}>
+            So the fix isn&apos;t more willpower. It&apos;s changing the system
+            around you — which is what the next 7 days do, one deliberate step at
+            a time.
+          </p>
+          <div style={{ padding: '0.25rem 0 0.25rem 1.5rem', borderLeft: '3px solid #F5C842' }}>
+            <p style={{ fontSize: 'clamp(1.4rem, 4vw, 2rem)', fontFamily: "'DM Serif Display', serif", color: '#F5C842', margin: 0, letterSpacing: '0.5px' }}>
+              You don&apos;t just learn. <em>You do.</em>
             </p>
-
-            <div style={{ padding: '1rem 0', borderLeft: '3px solid #F5C842', paddingLeft: '1.5rem' }}>
-              <p style={{ fontSize: '1.4rem', fontFamily: "'DM Serif Display', serif", color: '#F5C842', margin: 0, letterSpacing: '0.5px' }}>
-                You don't just learn. <em>You do.</em>
-              </p>
-            </div>
           </div>
         </div>
       </section>
 
-      {/* 7-DAY LADDER */}
+      {/* ── STAT BAND ───────────────────────────────────────────────────
+          A breath between two dense sections, carried entirely by numbers. */}
+      <section className="l-section l-section--flush" style={{ paddingTop: 'var(--l-7)', paddingBottom: 'var(--l-7)' }}>
+        <div className="l-wrap l-reveal">
+          <StatBand stats={STATS} />
+        </div>
+      </section>
+
+      {/* ── THE 7-DAY JOURNEY ───────────────────────────────────────────
+          Scroll-driven: the spine fills and each day lights as you reach it. */}
       <section id="programme" className="l-section l-section--focus">
         <div className="l-wrap l-reveal">
           <p className="l-label">The programme</p>
-          <h2 className="l-h2">Here's what changes —<br /><em>day by day.</em></h2>
-          <p className="l-p" style={{ marginBottom: '2rem' }}>Each day features specific exercises and visible outcomes.</p>
+          <h2 className="l-h2">Here&apos;s what changes —<br /><em>day by day.</em></h2>
+          <p className="l-p">Each day features specific exercises and a visible outcome.</p>
 
-          <div 
-            className="l-carousel-viewport"
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-          >
-            <div
-              className="l-carousel-track"
-              style={{
-                transform: `translateX(calc(-1 * (var(--card-w) / 2 + var(--card-m)) - (${activeIndex} * (var(--card-w) + 2 * var(--card-m))) + ${touchOffset}px))`,
-                transition: touchStart !== null ? 'none' : 'transform 0.6s cubic-bezier(0.2, 0, 0.2, 1)'
-              }}
-            >
-              {DAYS.map((d, i) => (
-                <div
-                  key={d.n}
-                  className={`l-carousel-card ${i === activeIndex ? 'active' : ''}`}
-                  style={{ '--day-rgb': d.rgb }}
-                  onClick={() => setActiveIndex(i)}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                    <div style={{ width: '80px' }}>
-                      <div style={{ height: '2px', background: d.color, boxShadow: `0 0 6px ${d.color}`, marginBottom: '4px' }} />
-                      <span style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '1.5px', color: d.color, textTransform: 'uppercase' }}>Day {d.n}</span>
-                    </div>
-                  </div>
+          <JourneyRail days={DAYS} />
 
-                  <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: '1.25rem', color: '#EDE8DC', marginBottom: '0.5rem', lineHeight: '1.2' }}>{d.title}</div>
-                  <div style={{ fontSize: '0.85rem', color: 'rgba(237,232,220,0.6)', marginBottom: '1.25rem', fontWeight: 300, minHeight: '3em' }}>{d.action}</div>
-
-                  <div style={{ borderTop: '1px solid #2C2C26', paddingTop: '1rem' }}>
-                    <div style={{ fontSize: '0.65rem', color: '#6B6860', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Outcome:</div>
-                    <div style={{ fontSize: '0.9rem', fontStyle: 'italic', color: d.color }}>{d.feel}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="l-carousel-nav">
-            <button
-              className="l-carousel-btn"
-              onClick={() => setActiveIndex(prev => Math.max(0, prev - 1))}
-              disabled={activeIndex === 0}
-              aria-label="Previous Day"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M15 18l-6-6 6-6" />
-              </svg>
-            </button>
-            <div className="l-carousel-dots">
-              {DAYS.map((_, i) => (
-                <div
-                  key={i}
-                  className={`l-carousel-dot ${i === activeIndex ? 'active' : ''}`}
-                  onClick={() => setActiveIndex(i)}
-                />
-              ))}
-            </div>
-            <button
-              className="l-carousel-btn"
-              onClick={() => setActiveIndex(prev => Math.min(DAYS.length - 1, prev + 1))}
-              disabled={activeIndex === DAYS.length - 1}
-              aria-label="Next Day"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 18l6-6-6-6" />
-              </svg>
-            </button>
-          </div>
-
-          <div className="l-card" style={{ marginTop: '3rem' }}>
-            <p style={{ color: '#EDE8DC', fontSize: '1rem' }}>By Day 7, you won't just feel better — you'll have a system that <strong>protects your attention from the inside out.</strong></p>
+          <div className="l-card" style={{ marginTop: 'var(--l-7)' }}>
+            <p style={{ color: '#EDE8DC', fontSize: '1rem', margin: 0 }}>
+              By Day 7, you won&apos;t just feel better — you&apos;ll have a system that <strong>protects your attention from the inside out.</strong>
+            </p>
           </div>
         </div>
       </section>
 
+      {/* ── PRODUCT SHOWCASE ────────────────────────────────────────────
+          Removes the last piece of uncertainty: what am I actually buying? */}
+      <section className="l-section l-section--calm">
+        <div className="l-wrap l-reveal">
+          <p className="l-label">See it before you buy it</p>
+          <h2 className="l-h2">This isn&apos;t another PDF.</h2>
 
+          <div className="l-showcase">
+            <div className="l-showcase-devices">
+              <div className="l-showcase-item">
+                <Tablet>
+                  <ScreenDaySeven />
+                </Tablet>
+                <p className="l-showcase-cap">Day 7 — your attention system</p>
+              </div>
+              <div className="l-showcase-item">
+                <Phone>
+                  <ScreenDayTwo />
+                </Phone>
+                <p className="l-showcase-cap">Day 2 — the audit</p>
+              </div>
+            </div>
 
-      {/* INSIDE */}
-      <section id="inside" className="l-section l-section--calm">
+            <div>
+              <p className="l-p" style={{ fontSize: '1.05rem', marginBottom: 'var(--l-5)' }}>
+                It&apos;s a web programme you work through, not a document you file
+                away. You tick real boxes, write real answers, and finish each day
+                with something you actually did.
+              </p>
+              <ul className="l-ba-col" style={{ listStyle: 'none', padding: 'var(--l-5)', margin: 0, display: 'flex', flexDirection: 'column', gap: 'var(--l-3)' }}>
+                {[
+                  'Opens in any browser — phone, tablet or laptop',
+                  'No downloads, no app stores',
+                  'Progress saves automatically as you go',
+                  'Come back to it whenever you want',
+                ].map((t) => (
+                  <li key={t} style={{ display: 'flex', gap: 'var(--l-3)', fontSize: '0.92rem', fontWeight: 300, color: 'rgba(237,232,220,0.85)' }}>
+                    <span className="l-ba-mark" style={{ color: '#00E87A' }}>✓</span>
+                    {t}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── BEFORE → AFTER ──────────────────────────────────────────────
+          Left column is the symptom list; right column is the programme's own
+          day-by-day outcomes. No claim appears here that isn't already made
+          somewhere it can be checked. */}
+      <section className="l-section">
+        <div className="l-wrap l-reveal">
+          <p className="l-label">The shift</p>
+          <h2 className="l-h2">Where you are now —<br /><em>and where 7 days puts you.</em></h2>
+
+          <div className="l-ba">
+            <div className="l-ba-col l-ba-col--before">
+              <div className="l-ba-k">Right now</div>
+              <ul>
+                {BEFORE.map((t) => (
+                  <li key={t}><span className="l-ba-mark">—</span>{t}</li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="l-ba-bridge">7 Days</div>
+
+            <div className="l-ba-col l-ba-col--after">
+              <div className="l-ba-k">After the reset</div>
+              <ul>
+                {AFTER_DAYS.map((n) => {
+                  const day = DAYS.find((d) => d.n === n);
+                  return (
+                    <li key={n}>
+                      <span className="l-ba-mark">✓</span>
+                      <span>
+                        {day.feel}
+                        <span style={{ display: 'block', fontSize: '0.72rem', letterSpacing: '2px', textTransform: 'uppercase', color: 'rgba(237,232,220,0.34)', marginTop: '4px' }}>
+                          Day {day.n} · {day.title}
+                        </span>
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── WHAT'S INSIDE ───────────────────────────────────────────────
+          A ledger of components rather than six identical tiles. */}
+      <section id="inside" className="l-section l-section--warm">
         <div className="l-wrap l-reveal">
           <p className="l-label">Your Focus Toolkit</p>
           <h2 className="l-h2">Everything you get to<br /><em>take back control.</em></h2>
+          <p className="l-p" style={{ fontSize: '1.05rem' }}>
+            41 interactive tasks across 7 days. Every component below is part of
+            the programme you get access to the moment you join.
+          </p>
 
-          <div style={{ marginBottom: '2.5rem' }}>
-            <p style={{ fontSize: '1.25rem', color: '#F5C842', fontFamily: "'DM Serif Display', serif", marginBottom: '0.5rem' }}>41 Interactive Tasks. Not theory — real action.</p>
-            <p className="l-p" style={{ opacity: 0.7 }}>Works on any device. No downloads. No app stores. Open and start.</p>
-          </div>
-
-          <div className="l-feature-grid">
-            {FEATURES.map((f) => (
-              <div key={f.title} className="l-feature">
+          <div className="l-bundle">
+            {FEATURES.map((f, i) => (
+              <div key={f.title} className="l-bundle-row">
+                <div className="l-bundle-i">{String(i + 1).padStart(2, '0')}</div>
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px', gap: '12px' }}>
-                    <strong>{f.title}</strong>
-                    <span className="l-chip">{f.value}</span>
-                  </div>
-                  <div style={{ fontSize: '0.85rem', lineHeight: '1.6', color: 'rgba(237,232,220,0.65)', fontWeight: 300 }}>
-                    {f.desc}
-                  </div>
+                  <p className="l-bundle-t">{f.title}</p>
+                  <p className="l-bundle-d">{f.desc}</p>
                 </div>
+                <span className="l-chip">{f.value}</span>
               </div>
             ))}
           </div>
 
-          <div className="l-value-total">
-            <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: '#6B6860', marginBottom: '8px' }}>Total Bundle Value</div>
-            <div className="l-num" style={{ fontSize: '2rem', color: '#FF3B3B', textDecoration: 'line-through', opacity: 0.6, marginBottom: '2rem' }}>₹{BUNDLE_VALUE.toLocaleString('en-IN')}</div>
-
-            <div style={{ fontSize: '1rem', color: '#F5C842', fontWeight: 600, marginBottom: '0.5rem' }}>You get everything for:</div>
-            <div className="l-num" style={{ fontSize: '3.5rem', color: '#F5C842', lineHeight: 1 }}>₹{PRICE}</div>
-            <div className="l-num" style={{ fontSize: '0.9rem', color: '#00E87A', marginTop: '8px', opacity: 0.8 }}>(You Save: ₹{(BUNDLE_VALUE - PRICE).toLocaleString('en-IN')})</div>
-          </div>
+          <p style={{ marginTop: 'var(--l-5)', textAlign: 'right', fontSize: '0.82rem', letterSpacing: '2px', textTransform: 'uppercase', color: '#6B6860' }}>
+            Total listed value —{' '}
+            <span className="l-num" style={{ color: 'rgba(237,232,220,0.72)' }}>
+              ₹{BUNDLE_VALUE.toLocaleString('en-IN')}
+            </span>
+          </p>
         </div>
       </section>
 
-      {/* FOR / NOT FOR */}
+      {/* ── WHO IT'S FOR ────────────────────────────────────────────────── */}
       <section className="l-section">
         <div className="l-wrap l-reveal">
           <p className="l-label">Be honest with yourself</p>
-          <h2 className="l-h2">Who this is for —<br /><em>and who it isn't.</em></h2>
+          <h2 className="l-h2">Who this is for —<br /><em>and who it isn&apos;t.</em></h2>
           <div className="l-split">
             <div className="l-split-col" style={{ borderTop: '2px solid #F5C842' }}>
-              <h4 style={{ fontSize: '0.62rem', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '1rem', color: '#F5C842', fontFamily: "'DM Sans',sans-serif" }}>This is for you if</h4>
+              <h4 className="l-split-k l-split-k--yes">This is for you if</h4>
               <ul>
                 {['You struggle to focus', 'Your screen time embarrasses you', 'You want structure, not just tips', 'You can commit to the process for 7 days'].map(t => (
                   <li key={t}><span style={{ color: '#F5C842' }}>→</span>{t}</li>
@@ -645,7 +735,7 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
               </ul>
             </div>
             <div className="l-split-col" style={{ borderTop: '2px solid #2C2C26' }}>
-              <h4 style={{ fontSize: '0.62rem', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '1rem', color: '#6B6860', fontFamily: "'DM Sans',sans-serif" }}>Not for you if</h4>
+              <h4 className="l-split-k l-split-k--no">Not for you if</h4>
               <ul>
                 {['You want a magic fix with zero effort', 'You won\'t take action', 'You prefer passive short content'].map(t => (
                   <li key={t}><span style={{ color: '#6B6860' }}>×</span>{t}</li>
@@ -656,142 +746,106 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
         </div>
       </section>
 
-      {/* PRICING */}
+      {/* ── PRICING ─────────────────────────────────────────────────────── */}
       <section className="l-section l-section--money" id="pricing">
         <div className="l-wrap l-reveal">
-          <div className="l-pricing" style={{ marginTop: '0' }}>
-            {/* Pricing display */}
+          <p className="l-label" style={{ justifyContent: 'center', display: 'flex' }}>The price</p>
+          <h2 className="l-h2" style={{ textAlign: 'center', marginBottom: 'var(--l-6)' }}>
+            Everything you need to<br /><em>reset your attention.</em>
+          </h2>
+
+          <div className="l-pricing" style={{ marginTop: 0 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: '14px', flexWrap: 'wrap' }}>
               <div className="l-num" style={{ fontSize: '1.8rem', color: '#6B6860', textDecoration: 'line-through' }}>₹{PREVIOUS_PRICE}</div>
-              <div className="l-num" style={{ fontSize: '3.5rem', color: '#F5C842', lineHeight: 1 }}>₹{PRICE}</div>
+              <div className="l-num" style={{ fontSize: 'clamp(3.5rem, 12vw, 5rem)', color: '#F5C842', lineHeight: 1 }}>₹{PRICE}</div>
             </div>
             <div className="l-num" style={{ fontSize: '0.9rem', color: '#00E87A', marginTop: '8px' }}>
               Launch price — you save ₹{PREVIOUS_PRICE - PRICE}
             </div>
 
-            <div style={{ fontSize: '0.78rem', color: '#6B6860', marginBottom: '1.25rem', marginTop: '10px' }}>Instant access • No subscription • Start today</div>
+            <div style={{ fontSize: '0.78rem', color: '#6B6860', marginBottom: '1.75rem', marginTop: '10px' }}>
+              One-time payment • No subscription • Instant access
+            </div>
 
-            <button className="l-cta" style={{ margin: '0 auto' }} onClick={isEnrolled ? onReturnToCourse : handleStartCheckout}>
-              {isEnrolled ? 'Return to Course' : `Yes, I Want My Focus Back`}
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }} aria-hidden="true">
-                <path d="M5 12h14M12 5l7 7-7 7" />
-              </svg>
+            <button className="l-cta" style={{ margin: '0 auto' }} onClick={primaryAction}>
+              {isEnrolled ? 'Return to Course' : 'Take Back My Attention'}
+              {ARROW}
             </button>
 
-            <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '0.85rem', color: 'rgba(237,232,220,0.85)', fontWeight: 400 }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00E87A" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <polyline points="20 6 9 17 4 12"></polyline>
+            <div style={{ marginTop: '1.75rem', paddingTop: '1.5rem', borderTop: '1px solid #2C2C26', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#F5C842" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
               </svg>
-              7-Day Money-Back Guarantee
+              <h3 style={{ color: '#F5C842', fontFamily: "'DM Serif Display', serif", fontSize: '1.3rem', margin: 0 }}>7-Day Money-Back Guarantee</h3>
+              <p style={{ color: 'rgba(237,232,220,0.75)', fontSize: '0.92rem', lineHeight: 1.65, margin: 0, fontWeight: 300, maxWidth: '46ch' }}>
+                Do the 7 days. If your focus hasn&apos;t improved, email us within
+                7 days of finishing and you get 100% back. No friction, no
+                interrogation.
+              </p>
             </div>
-
-            <div style={{ marginTop: '1.5rem', paddingTop: '1.25rem', borderTop: '1px solid #2C2C26' }}>
-              <div style={{ fontSize: '0.9rem', color: '#EDE8DC', fontWeight: 500, marginBottom: '4px' }}>Start today.</div>
-              <div style={{ fontSize: '0.9rem', color: '#F5C842', fontWeight: 600 }}>See results in 7 days.</div>
-            </div>
-
-          </div>
-
-          <div className="l-guarantee" style={{ marginTop: '2rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#F5C842" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-              </svg>
-            </div>
-            <h3 style={{ color: '#F5C842', fontFamily: "'DM Serif Display', serif", fontSize: '1.4rem', marginBottom: '0.75rem' }}>7-Day Money-Back Guarantee</h3>
-            <p style={{ color: 'rgba(237,232,220,0.8)', fontSize: '0.95rem', lineHeight: '1.6', margin: 0, fontWeight: 300 }}>
-              Do the 7 days.<br />
-              If your focus hasn&apos;t improved, email us within 7 days of finishing<br />
-              and you get 100% back. No friction, no interrogation.
-            </p>
           </div>
         </div>
-        {/* THE CHOICE */}
-        <section className="l-section l-section--alarm">
-          <div className="l-wrap l-reveal" style={{ textAlign: 'center', maxWidth: '600px' }}>
-            <p className="l-label" style={{ color: '#F5C842' }}>DECISION TIME</p>
-            <h2 id="c0" className="l-h2" style={{ marginBottom: '3rem' }}>The Choice Is Yours</h2>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', alignItems: 'center' }}>
-
-              {/* Option A */}
-              <div id="c1" className="l-choice l-choice--bad">
-                <h3 style={{ color: '#FF3B3B', fontFamily: "'DM Serif Display', serif", fontSize: '1.5rem', marginBottom: '1.25rem' }}>Option A — Leave This Page</h3>
-                <p style={{ color: '#888', fontSize: '1rem', lineHeight: '1.6', margin: 0 }}>
-                  Leave now, keep losing hours every day, and stay stuck in the same cycle.
-                </p>
-              </div>
-
-              {/* BRIDGE */}
-              <p id="c3" style={{
-                fontFamily: "'DM Serif Display', serif",
-                fontSize: '1.6rem',
-                color: '#F5C842',
-                margin: '1rem 0',
-                fontStyle: 'italic',
-                lineHeight: 1.4
-              }}>
-                "You already know which one you want."
-              </p>
-
-              {/* Option B */}
-              <div id="c2" className="l-choice l-choice--good">
-                <h3 style={{ color: '#00E87A', fontFamily: "'DM Serif Display', serif", fontSize: '1.5rem', marginBottom: '1.25rem' }}>Option B — Invest in Your Focus</h3>
-                <p style={{ color: '#EDE8DC', fontSize: '1.1rem', lineHeight: '1.6', marginBottom: '2rem' }}>
-                  Invest now and take your attention back permanently—and move your life forward.
-                </p>
-
-                <button id="c4" className="l-cta l-cta--go" style={{ margin: '0 auto' }} onClick={isEnrolled ? onReturnToCourse : handleStartCheckout}>
-                  {isEnrolled ? 'Return to Course' : 'Start My 7-Day Reset'}
-                  <svg
-                    width="18" height="18" viewBox="0 0 24 24"
-                    fill="none" stroke="currentColor" strokeWidth="2.2"
-                    strokeLinecap="round" strokeLinejoin="round"
-                    style={{ flexShrink: 0 }}
-                  >
-                    <path d="M5 12h14M12 5l7 7-7 7" />
-                  </svg>
-                </button>
-              </div>
-
-              <p style={{
-                color: 'rgba(237, 232, 220, 0.5)',
-                fontSize: '0.9rem',
-                fontWeight: 500,
-                textAlign: 'center',
-                margin: '1rem 0 0 0',
-                letterSpacing: '0.5px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px'
-              }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FF3B3B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                  <line x1="12" y1="9" x2="12" y2="13" />
-                  <line x1="12" y1="17" x2="12.01" y2="17" />
-                </svg>
-                Every day you wait, your future self falls behind.
-              </p>
-
-            </div>
-          </div>
-        </section>
       </section>
 
+      {/* ── THE CHOICE ──────────────────────────────────────────────────── */}
+      <section className="l-section l-section--alarm">
+        <div className="l-wrap l-reveal" style={{ textAlign: 'center', maxWidth: '620px' }}>
+          <p className="l-label" style={{ justifyContent: 'center', display: 'flex' }}>Decision time</p>
+          <h2 className="l-h2" style={{ marginBottom: '2.5rem' }}>The Choice Is Yours</h2>
 
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '28px', alignItems: 'center' }}>
 
-      {/* FAQ */}
+            <div className="l-choice l-choice--bad">
+              <h3 style={{ color: '#FF3B3B', fontFamily: "'DM Serif Display', serif", fontSize: '1.4rem', marginBottom: '1rem' }}>Option A — Leave This Page</h3>
+              <p style={{ color: '#888', fontSize: '1rem', lineHeight: 1.6, margin: 0 }}>
+                Close the tab and keep the same habits. Nothing changes, and
+                nothing is lost except the thing you came here about.
+              </p>
+            </div>
+
+            <p style={{
+              fontFamily: "'DM Serif Display', serif",
+              fontSize: 'clamp(1.35rem, 4vw, 1.7rem)',
+              color: '#F5C842',
+              margin: '0.5rem 0',
+              fontStyle: 'italic',
+              lineHeight: 1.4,
+            }}>
+              “You already know which one you want.”
+            </p>
+
+            <div className="l-choice l-choice--good">
+              <h3 style={{ color: '#00E87A', fontFamily: "'DM Serif Display', serif", fontSize: '1.4rem', marginBottom: '1rem' }}>Option B — Invest in Your Focus</h3>
+              <p style={{ color: '#EDE8DC', fontSize: '1.05rem', lineHeight: 1.6, marginBottom: '2rem' }}>
+                Spend ₹99 and 10–20 minutes a day for a week, and walk away with a
+                system that protects your attention.
+              </p>
+
+              <button className="l-cta l-cta--go" style={{ margin: '0 auto' }} onClick={primaryAction}>
+                {isEnrolled ? 'Return to Course' : 'Start My 7-Day Reset'}
+                {ARROW}
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* ── FAQ ─────────────────────────────────────────────────────────── */}
       <section id="faq" className="l-section">
-        <div className="l-wrap l-reveal">
+        <div className="l-wrap l-reveal" style={{ maxWidth: '760px' }}>
           <p className="l-label">Common questions</p>
           <h2 className="l-h2">Before you decide</h2>
           <div style={{ marginTop: '1.5rem' }}>
             {FAQS.map(([q, a], i) => (
               <div key={i} className="l-faq-item">
-                <button className="l-faq-q" onClick={() => setOpenFaq(openFaq === i ? null : i)}>
+                <button
+                  className="l-faq-q"
+                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                  aria-expanded={openFaq === i}
+                >
                   {q}
-                  <span style={{ color: '#F5C842', fontSize: '0.78rem', flexShrink: 0, transform: openFaq === i ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}>▼</span>
+                  <span aria-hidden="true" style={{ color: '#F5C842', fontSize: '0.78rem', flexShrink: 0, transform: openFaq === i ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}>▼</span>
                 </button>
                 {openFaq === i && <div className="l-faq-a">{a}</div>}
               </div>
@@ -800,28 +854,28 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
         </div>
       </section>
 
-      {/* FINAL CTA */}
+      {/* ── FINAL CTA ───────────────────────────────────────────────────── */}
       <section className="l-section l-section--warm" style={{ textAlign: 'center' }}>
-        <div className="l-wrap l-reveal" style={{ position: 'relative' }}>
-          <p className="l-label" style={{ textAlign: 'center' }}>7 days. That's all it takes to take control back.</p>
-          <h1 className="l-h1" style={{ fontSize: 'clamp(2rem,5vw,2.8rem)', textAlign: 'center' }}>Your attention is <em>still there.</em><br />You just need to reclaim it.</h1>
-          <p className="l-p" style={{ maxWidth: '420px', margin: '1.25rem auto 2.5rem', fontSize: '1rem', textAlign: 'center' }}>One programme. Proven protocols. One system that lasts.</p>
-          <button className="l-cta" style={{ margin: '0 auto' }} onClick={isEnrolled ? onReturnToCourse : handleStartCheckout}>
+        <div className="l-wrap l-reveal">
+          <p className="l-label" style={{ justifyContent: 'center', display: 'flex' }}>7 days. That&apos;s all it takes.</p>
+          <h1 className="l-h1" style={{ fontSize: 'clamp(2.2rem, 7vw, 4rem)', textAlign: 'center', maxWidth: '15ch', margin: '0 auto var(--l-6)' }}>
+            Your attention is <em>still yours.</em>
+          </h1>
+          <p className="l-p" style={{ maxWidth: '440px', margin: '0 auto 2.5rem', fontSize: '1.05rem', textAlign: 'center' }}>
+            You just need to take it back. One programme, seven days, one system
+            that lasts.
+          </p>
+          <button className="l-cta" style={{ margin: '0 auto' }} onClick={primaryAction}>
             {isEnrolled ? 'Return to Course' : 'Start Day 1'}
-            <svg
-              width="18" height="18" viewBox="0 0 24 24"
-              fill="none" stroke="currentColor" strokeWidth="2.2"
-              strokeLinecap="round" strokeLinejoin="round"
-              style={{ flexShrink: 0 }}
-            >
-              <path d="M5 12h14M12 5l7 7-7 7" />
-            </svg>
+            {ARROW}
           </button>
-          <p style={{ marginTop: '1rem', fontSize: '0.75rem', color: '#6B6860' }}>Instant access · Works on any device</p>
+          <p style={{ marginTop: '1.25rem', fontSize: '0.8rem', color: '#6B6860' }}>
+            ₹{PRICE} one-time · Instant access · Works on any device
+          </p>
         </div>
       </section>
 
-      {/* Footer */}
+      {/* ── FOOTER ──────────────────────────────────────────────────────── */}
       <footer className="l-footer">
         <div className="l-wrap" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem' }}>
 
@@ -847,7 +901,7 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
 
           <div style={{ display: 'flex', gap: '20px', fontSize: '0.8rem', marginTop: '0.5rem' }}>
             <button onClick={() => { setShowPrivacy(true); window.scrollTo(0, 0); }} style={{ background: 'none', border: 'none', color: '#6B6860', cursor: 'pointer', textDecoration: 'underline' }}>Privacy Policy</button>
-            <button onClick={() => { setShowTerms(true); window.scrollTo(0, 0); }} style={{ background: 'none', border: 'none', color: '#6B6860', cursor: 'pointer', textDecoration: 'underline' }}>Terms & Conditions</button>
+            <button onClick={() => { setShowTerms(true); window.scrollTo(0, 0); }} style={{ background: 'none', border: 'none', color: '#6B6860', cursor: 'pointer', textDecoration: 'underline' }}>Terms &amp; Conditions</button>
           </div>
 
           <p style={{ fontSize: '0.72rem', color: '#4A4840', marginTop: '1rem' }}>© {new Date().getFullYear()} Deeper Fix. All rights reserved.</p>
@@ -855,6 +909,30 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
       </footer>
 
       </div>{/* /l-content */}
+
+      {/* ── STICKY CTA (mobile) ─────────────────────────────────────────
+          Hidden above the hero and while checkout is open, so it never
+          competes with the thing it is trying to sell. */}
+      <div className="l-sticky" data-show={showSticky && !showCheckoutModal ? 'true' : 'false'}>
+        <div className="l-sticky-copy">
+          <div className="l-sticky-t">7-Day Attention Reset</div>
+          <div className="l-sticky-p">
+            {isEnrolled ? (
+              <span style={{ fontSize: '0.95rem' }}>You&apos;re enrolled</span>
+            ) : (
+              <><s>₹{PREVIOUS_PRICE}</s>₹{PRICE}</>
+            )}
+          </div>
+        </div>
+        <button
+          className="l-cta"
+          onClick={primaryAction}
+          tabIndex={showSticky ? 0 : -1}
+        >
+          {isEnrolled ? 'Resume' : 'Start the Reset'}
+          {ARROW}
+        </button>
+      </div>
 
       {/* Checkout Modal */}
       {showCheckoutModal && (
