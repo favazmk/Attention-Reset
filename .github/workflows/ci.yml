@@ -39,5 +39,11 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # Guards the payment path: entitlement write shapes, price resolution and
+      # the discount window. A wrong Firestore field path there is invisible to
+      # lint and to the build, and costs a customer their access.
+      - name: Test
+        run: npm test
+
       - name: Build
         run: npm run build

@@ -11,7 +11,8 @@ service cloud.firestore {
     // Without this, "am I enrolled?" is a self-answered question and the paywall
     // is decoration.
     function serverOwnedFields() {
-      return ['isEnrolled', 'enrolled_at', 'last_payment_id'];
+      return ['isEnrolled', 'enrolled_at', 'last_payment_id',
+              'entitlements', 'entitled_at'];
     }
 
     function isOwner(userId) {

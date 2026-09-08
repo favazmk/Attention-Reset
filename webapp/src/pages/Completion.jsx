@@ -1,7 +1,14 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { Suspense, lazy, useRef, useState, useEffect } from 'react';
 import ClickBox from '../components/ClickBox';
 
-export default function Completion({ data, updateData, user }) {
+const UpsellOffer = lazy(() => import('../components/UpsellOffer'));
+
+export default function Completion({ data, updateData, user, entitlements }) {
+  // If the prop is ever missing, this shows the offer rather than hiding it.
+  // That is the safe default: the server refuses to sell the same product
+  // twice, so the worst case is an offer someone does not need — not a
+  // customer who cannot find what they bought.
+  const ownsDeepWork = entitlements?.deepwork === true;
   const accent = '#F5C842'; // Landing page accent gold
   const reportRef = useRef(null);
   const containerRef = useRef(null);
@@ -363,25 +370,19 @@ export default function Completion({ data, updateData, user }) {
         )}
 
         {wantsMore === true && (
-          <div style={{ animation: 'fadeIn 0.5s ease-in' }}>
-            <h3 style={{ color: accent, fontSize: '1.4rem', marginBottom: '1rem', fontFamily: '"DM Serif Display", serif' }}>
-              Let's secure your progress.
-            </h3>
-            <p style={{ color: '#aaa', fontSize: '1.1rem', marginBottom: '2.5rem', maxWidth: '400px', margin: '0 auto 2.5rem auto', lineHeight: 1.6 }}>
-              Tell us what your worst distraction still is and we'll help you build a focus framework
-              around your actual work and routine.
-            </p>
-            <a
-              href={`https://wa.me/919061926060?text=${encodeURIComponent(
-                "Hi! I just finished the 7-Day Attention Reset and I'd like help building a permanent focus system."
-              )}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="cta-btn"
-              style={{ fontSize: '1.15rem', padding: '20px 48px', letterSpacing: '2px', boxShadow: `0 0 30px ${accent}44`, maxWidth: '400px', margin: '0 auto', display: 'block', borderRadius: '6px', background: accent, color: '#000', border: 'none', fontWeight: 600, cursor: 'pointer', textDecoration: 'none', textAlign: 'center' }}
-            >
-              Talk to us on WhatsApp
-            </a>
+          <div style={{ animation: 'fadeIn 0.5s ease-in', marginTop: '2.5rem' }}>
+            {ownsDeepWork ? (
+              <div style={{ padding: '2rem', background: '#131311', border: `1px solid ${accent}33`, borderRadius: '12px', maxWidth: '450px', margin: '0 auto' }}>
+                <p style={{ color: '#EDE8DC', fontSize: '1.05rem', margin: 0, lineHeight: 1.6 }}>
+                  You already have The Deep Work System. Open it from the header and
+                  start week one.
+                </p>
+              </div>
+            ) : (
+              <Suspense fallback={<div style={{ color: '#6B6860' }}>Loading…</div>}>
+                <UpsellOffer variant="inline" user={user} />
+              </Suspense>
+            )}
           </div>
         )}
       </div>

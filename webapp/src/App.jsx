@@ -6,6 +6,7 @@ import ConfirmModal from './components/ConfirmModal';
 import ErrorBoundary from './components/ErrorBoundary';
 import { auth, getDb } from './firebase';
 import { authedPost } from './api';
+import { readEntitlements } from './products';
 import {
   GoogleAuthProvider,
   signInWithPopup,
@@ -28,8 +29,12 @@ const Day5 = lazy(() => import('./pages/Day5'));
 const Day6 = lazy(() => import('./pages/Day6'));
 const Day7 = lazy(() => import('./pages/Day7'));
 const Completion = lazy(() => import('./pages/Completion'));
+const DeepWorkShell = lazy(() => import('./pages/deepwork/DeepWorkShell'));
+const UpsellOffer = lazy(() => import('./components/UpsellOffer'));
 
 const PAGES = ['intro', 'day1', 'day2', 'day3', 'day4', 'day5', 'day6', 'day7', 'completion'];
+
+const NO_ENTITLEMENTS = { reset7: false, deepwork: false };
 
 // Lets the owner move through the programme without waiting a day per step.
 // It only skips the pacing lock — it grants no access on its own.
@@ -94,6 +99,13 @@ export default function App() {
   const [data, setData] = useState({});
   const [user, setUser] = useState(null);
   const [isEnrolled, setIsEnrolled] = useState(false);
+  const [entitlements, setEntitlements] = useState(NO_ENTITLEMENTS);
+  // Which programme is on screen. The Deep Work System renders its own shell,
+  // so this is a top-level branch rather than a mode inside the 7-day one.
+  const [programme, setProgramme] = useState('reset7');
+  const [dwPageIndex, setDwPageIndex] = useState(0);
+  // Shown once, immediately after the reset is bought.
+  const [showUpsell, setShowUpsell] = useState(false);
   const [authResolved, setAuthResolved] = useState(false);
   const [introError, setIntroError] = useState(false);
   const [timeLeft, setTimeLeft] = useState('');
@@ -130,6 +142,10 @@ export default function App() {
         setData({});
         setCurrentPageIndex(0);
         setIsEnrolled(false);
+        setEntitlements(NO_ENTITLEMENTS);
+        setProgramme('reset7');
+        setDwPageIndex(0);
+        setShowUpsell(false);
         setShowLanding(true);
         setShowAuth(false);
         setAuthResolved(true);
@@ -145,6 +161,8 @@ export default function App() {
       // Enrolment is read from Firestore and written only by the server. The
       // browser gets no say in whether it has paid.
       let enrolled = false;
+      let owned = NO_ENTITLEMENTS;
+      let cloudDwPage = 0;
 
       try {
         const { db, doc, getDoc } = await getDb();
@@ -153,8 +171,10 @@ export default function App() {
           const stored = snap.data();
           cloudData = stored.data || {};
           cloudPage = stored.currentPageIndex || 0;
+          cloudDwPage = stored.deepWorkPageIndex || 0;
           cloudUpdatedAt = stored.dataUpdatedAt || 0;
-          enrolled = stored.isEnrolled === true;
+          owned = readEntitlements(stored);
+          enrolled = owned.reset7;
         }
       } catch (error) {
         console.error('Error fetching from Firestore:', error);
@@ -179,9 +199,13 @@ export default function App() {
       const finalPage = Math.max(cloudPage, localPage);
 
       // Paid but never got access (browser closed mid-checkout)? Recover it.
-      if (!enrolled) {
+      // Paid but never got access (browser closed mid-checkout)? Recover it.
+      // Worth asking whenever anything is unowned, not just the reset — the
+      // add-on can be stranded the same way.
+      if (!enrolled || !owned.deepwork) {
         try {
           const result = await authedPost('/api/check-entitlement');
+          if (result.entitlements) owned = result.entitlements;
           enrolled = result.enrolled === true;
         } catch (error) {
           console.error('Entitlement check failed:', error);
@@ -203,9 +227,14 @@ export default function App() {
         });
       }
 
+      const localDwPage =
+        parseInt(localStorage.getItem(`ar_dw_page_${authUser.uid}`) || '0', 10) || 0;
+
       setData(finalData);
       setCurrentPageIndex(finalPage);
+      setDwPageIndex(Math.max(cloudDwPage, localDwPage));
       setIsEnrolled(enrolled);
+      setEntitlements(owned);
       setShowLanding(!enrolled);
       setUser(authUser);
       setAuthResolved(true);
@@ -261,6 +290,14 @@ export default function App() {
     localStorage.setItem(`ar_page_${user.uid}`, String(currentPageIndex));
     saveUserDoc(user.uid, { currentPageIndex });
   }, [currentPageIndex, user]);
+
+  // Kept in its own key so the two programmes never overwrite each other's
+  // position, and so nothing about the existing 7-day progress had to migrate.
+  useEffect(() => {
+    if (!user) return;
+    localStorage.setItem(`ar_dw_page_${user.uid}`, String(dwPageIndex));
+    saveUserDoc(user.uid, { deepWorkPageIndex: dwPageIndex });
+  }, [dwPageIndex, user]);
 
   const updateData = (key, value) => {
     setData((prev) => {
@@ -345,7 +382,7 @@ export default function App() {
       case 'day7':
         return <Day7 {...props} />;
       case 'completion':
-        return <Completion {...props} />;
+        return <Completion {...props} entitlements={entitlements} />;
       default:
         return <Intro {...props} />;
     }
@@ -355,7 +392,22 @@ export default function App() {
   // time this runs — there is nothing for the client to write.
   const handlePaymentSuccess = () => {
     setIsEnrolled(true);
+    setEntitlements((prev) => ({ ...prev, reset7: true }));
     setShowLanding(false);
+    // The add-on is offered here and only here on the way in. It is skippable,
+    // and the reset they just paid for is already unlocked behind it.
+    setShowUpsell(true);
+    window.scrollTo(0, 0);
+  };
+
+  const handleUpsellPurchased = () => {
+    setEntitlements((prev) => ({ ...prev, deepwork: true }));
+    setShowUpsell(false);
+    window.scrollTo(0, 0);
+  };
+
+  const openDeepWork = () => {
+    setProgramme('deepwork');
     window.scrollTo(0, 0);
   };
 
@@ -491,6 +543,52 @@ export default function App() {
 
   const isOwner = user?.email === OWNER_EMAIL;
 
+  // Shown once, straight after the reset is bought. Declining just falls
+  // through to the programme they already paid for.
+  if (showUpsell) {
+    return (
+      <>
+        <div className="container">
+          <ErrorBoundary>
+            <Suspense fallback={<PageFallback />}>
+              <UpsellOffer
+                variant="screen"
+                user={user}
+                onDone={() => setShowUpsell(false)}
+                onPurchased={handleUpsellPurchased}
+              />
+            </Suspense>
+          </ErrorBoundary>
+        </div>
+        <SpeedInsights />
+        {profileModal}
+      </>
+    );
+  }
+
+  if (programme === 'deepwork' && entitlements.deepwork) {
+    return (
+      <>
+        <ErrorBoundary>
+          <Suspense fallback={<PageFallback />}>
+            <DeepWorkShell
+              data={data}
+              updateData={updateData}
+              user={user}
+              pageIndex={dwPageIndex}
+              setPageIndex={setDwPageIndex}
+              onExit={() => setProgramme('reset7')}
+              introError={introError}
+              setIntroError={setIntroError}
+            />
+          </Suspense>
+        </ErrorBoundary>
+        <SpeedInsights />
+        {profileModal}
+      </>
+    );
+  }
+
   return (
     <div className="container">
       <header style={{ marginBottom: '2.5rem' }}>
@@ -546,6 +644,40 @@ export default function App() {
           >
             7-Day Attention Reset
           </h1>
+          {entitlements.deepwork && (
+            <button
+              onClick={openDeepWork}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '0.62rem',
+                letterSpacing: '1.5px',
+                textTransform: 'uppercase',
+                color: 'var(--day0)',
+                background: 'rgba(245,200,66,0.08)',
+                border: '1px solid rgba(245,200,66,0.3)',
+                borderRadius: '999px',
+                padding: '6px 12px',
+                cursor: 'pointer',
+              }}
+            >
+              Deep Work
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </button>
+          )}
           <button
             onClick={() => setShowProfile(true)}
             style={{

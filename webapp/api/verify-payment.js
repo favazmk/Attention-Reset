@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { verifyRequest } from './_firebase-admin.js';
 import { getRazorpay, grantEntitlement } from './_entitlement.js';
-import { PRICE_PAISE } from './_pricing.js';
+import { DEFAULT_PRODUCT_ID, getProduct, toPaise } from './_products.js';
 
 const META_PIXEL_ID = '799577566351233';
 
@@ -55,8 +55,31 @@ export default async function handler(req, res) {
     return res.status(409).json({ status: 'pending', message: 'Payment has not been captured yet.' });
   }
 
-  if (Number(order.amount_paid) < PRICE_PAISE) {
-    console.error(`Underpaid order ${order.id}: ${order.amount_paid} < ${PRICE_PAISE}`);
+  // Which product, and what we charged for it, both come from the notes we set
+  // when the order was created — Razorpay hands them back unchanged. Reading
+  // the expectation from here rather than recomputing it means a price change
+  // or an expired new-buyer window can never retroactively invalidate a payment
+  // someone already made at the old price.
+  //
+  // Known, accepted consequence: a Razorpay order does not expire, so an
+  // eligible user could create a discounted order inside the 48-hour window and
+  // pay it weeks later, keeping the new-buyer price. That is deliberate. The
+  // alternative — re-checking eligibility here — means rejecting a payment
+  // Razorpay has already captured, which takes someone's money and refuses them
+  // the product. Losing the discount margin on a rare, non-scalable, single-use
+  // case is the better failure. Do not "fix" this by adding a window check
+  // after capture.
+  const productId = order.notes?.productId || DEFAULT_PRODUCT_ID;
+  const product = getProduct(productId);
+  if (!product) {
+    console.error(`Order ${order.id} names unknown product ${productId}`);
+    return res.status(400).json({ status: 'failure', message: 'Unknown product on this order.' });
+  }
+
+  const expectedPaise = Number(order.notes?.expected_paise) || toPaise(product.priceRupees);
+
+  if (Number(order.amount_paid) < expectedPaise) {
+    console.error(`Underpaid order ${order.id}: ${order.amount_paid} < ${expectedPaise}`);
     return res.status(400).json({ status: 'failure', message: 'Payment amount did not match.' });
   }
 
@@ -65,9 +88,11 @@ export default async function handler(req, res) {
   try {
     ({ firstTime } = await grantEntitlement({
       uid: user.uid,
+      productId,
       orderId: order.id,
       paymentId: razorpay_payment_id,
       amountPaise: Number(order.amount_paid),
+      expectedPaise,
     }));
   } catch (err) {
     console.error('Entitlement grant failed:', err);
@@ -83,17 +108,18 @@ export default async function handler(req, res) {
       orderId: order.id,
       valueRupees: Number(order.amount_paid) / 100,
       email: user.email,
+      contentName: product.name,
     });
   }
 
-  return res.status(200).json({ status: 'success', enrolled: true });
+  return res.status(200).json({ status: 'success', enrolled: true, productId });
 }
 
 function sha256(value) {
   return crypto.createHash('sha256').update(value).digest('hex');
 }
 
-function sendPurchaseEvent(req, { orderId, valueRupees, email }) {
+function sendPurchaseEvent(req, { orderId, valueRupees, email, contentName }) {
   const accessToken = process.env.META_CAPI_TOKEN;
   if (!accessToken) return;
 
@@ -112,7 +138,7 @@ function sendPurchaseEvent(req, { orderId, valueRupees, email }) {
         event_time: Math.floor(Date.now() / 1000),
         action_source: 'website',
         event_id: orderId, // matches the browser pixel's eventID, so Meta dedupes
-        custom_data: { currency: 'INR', value: valueRupees },
+        custom_data: { currency: 'INR', value: valueRupees, content_name: contentName },
         user_data: userData,
       },
     ],
