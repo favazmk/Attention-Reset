@@ -1,6 +1,7 @@
 import React from 'react';
 import { PAGE_PATTERNS } from '../../components/pagePatterns';
-import { WEEKS, weekTaskIds } from './content';
+import { weekTaskIds } from './content';
+import { TOTAL_DAYS, TOTAL_WEEKS } from './outline.js';
 
 /**
  * The end of the programme, and its actual deliverable.
@@ -10,14 +11,14 @@ import { WEEKS, weekTaskIds } from './content';
  * ritual and their relapse protocol. Nothing on this page is generated; it is
  * their own answers played back as a single system they can keep.
  */
-export default function DwCompletion({ data }) {
+export default function DwCompletion({ data, weeks = [] }) {
   const accent = '#F5C842';
 
-  const daysDone = WEEKS.reduce(
+  const daysDone = weeks.reduce(
     (total, w) => total + weekTaskIds(w).filter((id) => data[id]).length,
     0
   );
-  const weeksDone = WEEKS.filter((w) => data[`dw_${w.key}_finished`]).length;
+  const weeksDone = weeks.filter((w) => data[`dw_${w.key}_finished`]).length;
 
   const system = [
     { k: 'The window I protect', v: data.dw_window, from: 'Set at the start' },
@@ -64,8 +65,8 @@ export default function DwCompletion({ data }) {
         }}
       >
         {[
-          { n: weeksDone, of: 4, label: 'Weeks finished' },
-          { n: daysDone, of: 28, label: 'Daily practices' },
+          { n: weeksDone, of: TOTAL_WEEKS, label: 'Weeks finished' },
+          { n: daysDone, of: TOTAL_DAYS, label: 'Daily practices' },
         ].map((s) => (
           <div key={s.label} style={{ textAlign: 'center' }}>
             <div

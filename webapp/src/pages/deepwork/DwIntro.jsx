@@ -2,7 +2,7 @@ import React from 'react';
 import ClickBox from '../../components/ClickBox';
 import FillLine from '../../components/FillLine';
 import { PAGE_PATTERNS } from '../../components/pagePatterns';
-import { WEEKS } from './content';
+import { WEEK_OUTLINE } from './outline.js';
 
 export default function DwIntro({ data, updateData, introError }) {
   const accent = '#F5C842';
@@ -59,7 +59,7 @@ export default function DwIntro({ data, updateData, introError }) {
             THE FOUR WEEKS
           </h4>
 
-          {WEEKS.map((w) => (
+          {WEEK_OUTLINE.map((w) => (
             <div
               key={w.key}
               style={{

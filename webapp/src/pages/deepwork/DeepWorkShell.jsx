@@ -1,6 +1,8 @@
 import React, { Suspense, lazy } from 'react';
 import ErrorBoundary from '../../components/ErrorBoundary';
-import { DW_PAGES, WEEKS, isWeekComplete } from './content';
+import { DW_PAGES, isWeekComplete } from './content';
+import { TOTAL_WEEKS, WEEK_OUTLINE } from './outline.js';
+import useDeepWorkContent from './useDeepWorkContent';
 
 const DwIntro = lazy(() => import('./DwIntro'));
 const DwWeek = lazy(() => import('./DwWeek'));
@@ -15,7 +17,73 @@ const DwCompletion = lazy(() => import('./DwCompletion'));
  * mode through it would have put the live paid flow at risk for no benefit.
  *
  * Gating here is simply: a week opens when the one before it is finished.
+ *
+ * The weeks arrive from `/api/deepwork-content` rather than the bundle, so this
+ * also owns the states a static import never had: fetching, refused, and
+ * unreachable. Navigation and the progress track are driven by the outline, so
+ * they render correctly while the content is still in flight.
  */
+/**
+ * What the page shows while the programme is in flight, refused, or
+ * unreachable. These states exist because the content is gated now — a failed
+ * fetch must not look like an empty programme to someone who paid for it.
+ */
+function ContentState({ status, onRetry, accent }) {
+  const copy = {
+    loading: {
+      title: 'Loading your programme…',
+      body: null,
+    },
+    denied: {
+      title: 'This is a separate add-on',
+      body: "The Deep Work System isn't on this account. If you just bought it, sign out and back in — the purchase may not have finished registering.",
+    },
+    error: {
+      title: "Couldn't load the programme",
+      body: 'Your access is fine — this was a network problem. Your answers are saved.',
+    },
+  }[status] ?? { title: 'Loading…', body: null };
+
+  return (
+    <div
+      style={{
+        minHeight: '40vh',
+        display: 'grid',
+        placeItems: 'center',
+        textAlign: 'center',
+        padding: '3rem 1.5rem',
+      }}
+    >
+      <div style={{ maxWidth: '38ch' }}>
+        <p
+          style={{
+            color: status === 'loading' ? 'var(--muted)' : 'var(--cream)',
+            fontSize: '1.1rem',
+            fontFamily: 'var(--font-display)',
+            margin: 0,
+          }}
+        >
+          {copy.title}
+        </p>
+        {copy.body && (
+          <p style={{ color: 'var(--muted)', fontSize: '0.92rem', marginTop: '0.75rem' }}>
+            {copy.body}
+          </p>
+        )}
+        {status === 'error' && (
+          <button
+            className="primary-btn"
+            onClick={onRetry}
+            style={{ width: 'auto', margin: '1.5rem auto 0', backgroundColor: accent }}
+          >
+            Try again
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function DeepWorkShell({
   data,
   updateData,
@@ -26,6 +94,7 @@ export default function DeepWorkShell({
   introError,
   setIntroError,
 }) {
+  const { weeks, status, retry } = useDeepWorkContent();
   const pageId = DW_PAGES[pageIndex];
   const accent = '#F5C842';
 
@@ -35,8 +104,8 @@ export default function DeepWorkShell({
   const isUnlocked = (i) => {
     if (i === 0) return true;
     if (i === 1) return !!data.dw_commitment;
-    if (i <= WEEKS.length) return weekFinished(i - 1);
-    return weekFinished(WEEKS.length);
+    if (i <= TOTAL_WEEKS) return weekFinished(i - 1);
+    return weekFinished(TOTAL_WEEKS);
   };
 
   const handleNext = () => {
@@ -61,8 +130,13 @@ export default function DeepWorkShell({
   const renderPage = () => {
     const props = { data, updateData, user };
     if (pageId === 'dw_intro') return <DwIntro {...props} introError={introError} />;
-    if (pageId === 'dw_completion') return <DwCompletion {...props} />;
-    const week = WEEKS[pageIndex - 1];
+
+    // Only the week and completion pages need the fetched material; the intro
+    // is built from the outline, so it stays usable while the rest loads.
+    if (status !== 'ready') return <ContentState status={status} onRetry={retry} accent={accent} />;
+
+    if (pageId === 'dw_completion') return <DwCompletion {...props} weeks={weeks} />;
+    const week = weeks[pageIndex - 1];
     return week ? <DwWeek week={week} {...props} /> : <DwIntro {...props} />;
   };
 
@@ -70,13 +144,14 @@ export default function DeepWorkShell({
   const nextLabel =
     pageIndex === 0
       ? 'Start Week 1'
-      : pageIndex <= WEEKS.length - 1
+      : pageIndex <= TOTAL_WEEKS - 1
         ? `Start Week ${pageIndex + 1}`
-        : pageIndex === WEEKS.length
+        : pageIndex === TOTAL_WEEKS
           ? 'See my system'
           : '';
 
-  const currentWeek = pageIndex >= 1 && pageIndex <= WEEKS.length ? WEEKS[pageIndex - 1] : null;
+  const currentWeek =
+    weeks && pageIndex >= 1 && pageIndex <= TOTAL_WEEKS ? weeks[pageIndex - 1] : null;
   const trackColor = currentWeek ? currentWeek.color : accent;
 
   return (
@@ -180,8 +255,8 @@ export default function DeepWorkShell({
               const unlocked = isUnlocked(i);
               const active = i === pageIndex;
               const done = i <= pageIndex;
-              const color = i === 0 ? accent : (WEEKS[i - 1]?.color ?? accent);
-              const label = i === 0 ? 'Start' : i <= WEEKS.length ? `W${i}` : 'System';
+              const color = i === 0 ? accent : (WEEK_OUTLINE[i - 1]?.color ?? accent);
+              const label = i === 0 ? 'Start' : i <= TOTAL_WEEKS ? `W${i}` : 'System';
 
               return (
                 <button
