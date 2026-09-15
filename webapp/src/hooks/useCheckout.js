@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { authedPost } from '../api';
+import { trackEvent } from '../meta';
 
 /**
  * Buy one product: create the order, hand it to Razorpay, verify what came back.
@@ -19,6 +20,10 @@ export default function useCheckout({ onSuccess, onError }) {
     async ({ productId, name, description, prefill }) => {
       if (busy) return;
       setBusy(true);
+
+      // The upsell had no InitiateCheckout of its own, so Meta saw the funnel
+      // end at the reset. Fired before the order so an abandoned sheet counts.
+      trackEvent('InitiateCheckout', { productId });
 
       try {
         const order = await authedPost('/api/create-order', { productId });

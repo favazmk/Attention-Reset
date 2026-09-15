@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "test": "node test/pricing.test.mjs && node test/entitlement.test.mjs && node test/content.test.mjs",
+    "test": "node test/pricing.test.mjs && node test/entitlement.test.mjs && node test/content.test.mjs && node test/meta.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

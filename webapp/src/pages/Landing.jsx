@@ -15,6 +15,7 @@ import {
   ScreenDaySeven,
 } from '../components/landing/ProductScreens';
 import { authedPost } from '../api';
+import { trackEvent } from '../meta';
 import '../styles/landing.css';
 
 const PRICE = 99;
@@ -138,9 +139,10 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
   }, []);
 
   // Meta needs mid-funnel signal to optimise against — a ₹99 product will never
-  // hit the purchase volume that Purchase-only optimisation requires.
+  // hit the purchase volume that Purchase-only optimisation requires. Sent from
+  // the browser and the server together, so blocked pixels still report.
   useEffect(() => {
-    if (window.fbq) window.fbq('track', 'ViewContent', { content_name: '7-Day Attention Reset', value: PRICE, currency: 'INR' });
+    trackEvent('ViewContent', { productId: 'reset7', value: PRICE });
   }, []);
 
   // Someone who clicked "buy" before signing up gets dropped straight back into
@@ -157,7 +159,7 @@ export default function Landing({ onPaymentSuccess, onStartReset, isLoggedIn, is
 
   const handleStartCheckout = () => {
     if (isEnrolled) return;
-    if (window.fbq) window.fbq('track', 'InitiateCheckout', { value: PRICE, currency: 'INR' });
+    trackEvent('InitiateCheckout', { productId: 'reset7', value: PRICE });
     setShowCheckoutModal(true);
   };
 

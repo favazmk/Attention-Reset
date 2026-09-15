@@ -2,8 +2,7 @@ import crypto from 'crypto';
 import { verifyRequest } from './_firebase-admin.js';
 import { getRazorpay, grantEntitlement } from './_entitlement.js';
 import { DEFAULT_PRODUCT_ID, getProduct, toPaise } from './_products.js';
-
-const META_PIXEL_ID = '799577566351233';
+import { sendMetaEvent } from './_meta.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -104,49 +103,22 @@ export default async function handler(req, res) {
 
   // ── 4. Meta Conversions API — only on the first grant, never on replays ─────
   if (firstTime) {
-    sendPurchaseEvent(req, {
-      orderId: order.id,
-      valueRupees: Number(order.amount_paid) / 100,
+    sendMetaEvent(req, {
+      eventName: 'Purchase',
+      // The browser pixel uses the order id as its eventID for this same
+      // purchase, so Meta collapses the two into one conversion.
+      eventId: order.id,
+      customData: {
+        currency: 'INR',
+        value: Number(order.amount_paid) / 100,
+        content_name: product.name,
+        content_ids: [productId],
+        content_type: 'product',
+      },
       email: user.email,
-      contentName: product.name,
+      uid: user.uid,
     });
   }
 
   return res.status(200).json({ status: 'success', enrolled: true, productId });
-}
-
-function sha256(value) {
-  return crypto.createHash('sha256').update(value).digest('hex');
-}
-
-function sendPurchaseEvent(req, { orderId, valueRupees, email, contentName }) {
-  const accessToken = process.env.META_CAPI_TOKEN;
-  if (!accessToken) return;
-
-  const userData = {
-    client_ip_address: (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || undefined,
-    client_user_agent: req.headers['user-agent'] || undefined,
-  };
-  // A hashed email materially improves Meta's match rate, which is the entire
-  // reason the CAPI integration exists.
-  if (email) userData.em = [sha256(email.trim().toLowerCase())];
-
-  const payload = {
-    data: [
-      {
-        event_name: 'Purchase',
-        event_time: Math.floor(Date.now() / 1000),
-        action_source: 'website',
-        event_id: orderId, // matches the browser pixel's eventID, so Meta dedupes
-        custom_data: { currency: 'INR', value: valueRupees, content_name: contentName },
-        user_data: userData,
-      },
-    ],
-  };
-
-  fetch(`https://graph.facebook.com/v19.0/${META_PIXEL_ID}/events?access_token=${accessToken}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  }).catch((err) => console.error('Meta CAPI request error:', err.message));
 }
