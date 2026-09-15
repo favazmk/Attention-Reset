@@ -26,3 +26,13 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Scratch files from ad-hoc curl/debug checks against the live site.
+# These were committed once by accident when $TMPDIR was unset.
+/b.js
+/bundle.js
+/chunk.js
+/chunks.txt
+/entry.js
+/p.html
+/page.html
