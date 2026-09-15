@@ -33,6 +33,7 @@ dist-ssr
 /bundle.js
 /chunk.js
 /chunks.txt
+/e.js
 /entry.js
 /p.html
 /page.html
